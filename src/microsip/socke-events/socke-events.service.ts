@@ -1,14 +1,21 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { HttpAxiosService } from 'src/http-axios/http-axios/http-axios.service';
+import { LoggerService } from 'src/logger/logger/logger.service';
 import { SocketService } from 'src/socket/socket/socket.service';
+import { Logger } from 'winston';
 
 @Injectable()
 export class SockeEventsService {
-  //Constructor
+  private logger: Logger;
   constructor(
     @Inject(SocketService) private readonly socket: SocketService,
     @Inject(HttpAxiosService) private httpService: HttpAxiosService,
+    @Inject(LoggerService) private loggerService: LoggerService,
   ) {
+    this.logger = loggerService.wLogger({
+      logName: 'Inser Microsip Service',
+      level: 'info',
+    });
     const handlers = {
       insertFolio: this.handlerInsertFolio,
     };
@@ -19,14 +26,19 @@ export class SockeEventsService {
   }
   //Handler Events
   handlerInsertFolio = (data: any, httpService: HttpAxiosService) => {
+    this.logger.info('Starting InserMS Process');
     httpService
       .postNode('api/shoppingCart/cartSearch', data)
       .then((respose) => {
         this.msInsertFolio(respose.data.data, httpService)
-          .then((result) => console.log(result))
-          .catch((result) => console.log(result));
+          .then((result) => this.logger.info(result))
+          .catch((result) =>
+            this.logger.error('Error while inserting the data', result),
+          );
       })
-      .catch((error) => console.log(error));
+      .catch((error) =>
+        this.logger.error('Error while fetching data from Node backend', error),
+      );
   };
   //Methods for inserction
   async msInsertFolio(data: any, httpService: HttpAxiosService): Promise<any> {
@@ -48,11 +60,6 @@ export class SockeEventsService {
       `${seller.name_seller} ${seller.last_name_seller}`.toLocaleUpperCase();
     const idCustomerMS = customer.id_customer_microsip;
     const sellerData = { request_token: '1234', name: sellerName };
-    console.log(
-      '##############################################################################################',
-    );
-    console.log(' ');
-    console.log(`Staring... fetching API Microsip createSeller`);
     const insertedSeller: any = await httpService.postMicrosip(
       'Seller/createSeller',
       sellerData,
@@ -73,11 +80,7 @@ export class SockeEventsService {
         `There was an error creating or getting the seller for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
-    console.log(
-      `${insertedSeller.data.msg}, id_Seller: ${insertedSeller.data.id_seller}`,
-    );
     const id_seller = insertedSeller.data.id_seller;
-    console.log(`Staring... fetching API Microsip insertCustomerNode`);
     const customerData = {
       request_token: '1234',
       id_customer_microsip: idCustomerMS,
@@ -87,7 +90,6 @@ export class SockeEventsService {
       customerData,
     );
     if (insertedCustomer == undefined) {
-      console.log('undefined');
       return Promise.reject(
         `There was an error creating or getting the customer for id_cart: ${id_cart} the error can be found in the log file`,
       );
@@ -102,7 +104,6 @@ export class SockeEventsService {
         `There was an error creating or getting the customer for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
-    console.log(`${insertedCustomer.data.msg}`);
     const supplierArrays: any[] = [];
     const quantityArrays: any[] = [];
     const costsArrays: any[] = [];
@@ -194,9 +195,7 @@ export class SockeEventsService {
       const name_Product = objAux[product]['name'];
       const price = Number(objAux[product]['price_product']).toFixed(2);
       const reference = objAux[product]['reference'];
-      // descrip = descrip + " | Nombre: " + name_Product + " - NumPartFab: "+ reference;
       const listaPricesMS = this.listPrices(objAux[product]['cost_product']);
-      // recorrer el array de precios para insertar al articulo en MS
       for (const row of listaPricesMS) {
         const rprice = Number(row['precio']).toFixed(2);
         const rmargin = Number(row['margen']).toFixed(2);
@@ -237,16 +236,11 @@ export class SockeEventsService {
       createProduct.push(objAux[product]['createProdMS'].toString());
 
       // consumir el endpoint insertar productos
-      console.log(
-        '######### Consumiendo API Microsip Quotation/insertProductNode ##############',
-      );
-      console.log('');
       const insertedProduct: any = await httpService.postMicrosip(
         'Quotation/insertProductNode',
         dProduct,
       );
       if (insertedProduct == undefined) {
-        console.log('undefined');
         return Promise.reject(
           `There was an error creating or getting the product for id_cart: ${id_cart} the error can be found in the log file`,
         );
@@ -261,7 +255,6 @@ export class SockeEventsService {
           `There was an error creating or getting the product for id_cart: ${id_cart} the error can be found in the log file`,
         );
       }
-      console.log(insertedProduct.data.msg);
     }
     const suppliersString = supplierArrays.join(',');
     const quantitysString = quantityArrays.join('|');
@@ -295,17 +288,11 @@ export class SockeEventsService {
       cond_id: String(data[0].cond_id),
       dir_id: String(data[0].dir_id),
     };
-    console.log(
-      '######### Consumiendo API Microsip Quotation/createQuotation ##############',
-    );
-    console.log(dataQuot);
-    console.log('');
     const insertedQuot: any = await httpService.postMicrosip(
       'Quotation/createQuotation',
       dataQuot,
     );
     if (insertedQuot == undefined) {
-      console.log('undefined');
       return Promise.reject(
         `There was an error creating or getting the Quotation for id_cart: ${id_cart} the error can be found in the log file`,
       );
@@ -320,8 +307,6 @@ export class SockeEventsService {
         `There was an error creating or getting the Quotation for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
-    console.log(insertedQuot.data);
-    console.log(' ');
     const dataResponse = {
       id_cart: id_cart,
       folio: insertedQuot.data.folio,
@@ -335,7 +320,6 @@ export class SockeEventsService {
       },
     );
     if (insertedNode == undefined) {
-      console.log('undefined');
       return Promise.reject(
         `There was an error creating or getting for the final node insertion for id_cart: ${id_cart} the error can be found in the log file`,
       );
@@ -350,9 +334,9 @@ export class SockeEventsService {
         `There was an error creating or getting for the final node insertion for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
-    console.log(insertedNode.data);
-    console.log(' ');
-    return Promise.resolve(`The Folio has been insert successfuly`);
+    return Promise.resolve(
+      `The Folio has been insert successfuly for the id_cart: ${id_cart}, folio: ${insertedQuot.data.folio}, user: ${id_user}`,
+    );
   }
   listPrices(costo: number): { precio: number; margen: number }[] {
     let comision: number[] = [];

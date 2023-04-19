@@ -72,11 +72,12 @@ export class SockeEventsService {
       products,
       id_user,
     } = data[0];
-    const microsipDescription = `${id_cart} | ${description}`;
+    const microsipDescription = `${id_cart} | ${description == null ? "" : description}`;
     const sellerName =
       `${seller.name_seller} ${seller.last_name_seller}`.toLocaleUpperCase();
     const idCustomerMS = customer.id_customer_microsip;
     const sellerData = { request_token: '1234', name: sellerName };
+
     const insertedSeller: any = await httpService.postMicrosip(
       'Seller/createSeller',
       sellerData,
@@ -134,6 +135,7 @@ export class SockeEventsService {
     const objAux: any = {};
     //juntar los articulos de la misma referencia para juntar las cantidades y aparezcan las unidades del producto en general y no individualmente
     for (const value of products) {
+      value['reference'] = value['reference'].trim()
       if (value['reference'] == 'SINCOD') {
         //codigo para agrupar articulos SINCOD
         if (value['sku'] in objAux) {
@@ -213,12 +215,14 @@ export class SockeEventsService {
       const price = Number(objAux[product]['price_product']).toFixed(2);
       const reference = objAux[product]['reference'];
       const listaPricesMS = this.listPrices(objAux[product]['cost_product']);
+
       for (const row of listaPricesMS) {
         const rprice = Number(row['precio']).toFixed(2);
         const rmargin = Number(row['margen']).toFixed(2);
         pricesStrInsertMS.push(rprice.toString());
         marginStrInsertMS.push(rmargin.toString());
       }
+
       // pasar el array en forma de un string para mandarlo a la api de c#
       const StringInsertPricesMS = pricesStrInsertMS.join('|');
       const StringInsertMargenMS = marginStrInsertMS.join('|');
@@ -234,7 +238,7 @@ export class SockeEventsService {
         checkCreate: objAux[product]['createProdMS'].toString(),
       };
       // console.log(dProduct);
-      // sys.exit();
+      //sys.exit();
       // preparación de los parametros para la cotización
       let notas = '';
       if (objAux[product]['comment'] === null) {
@@ -352,7 +356,7 @@ export class SockeEventsService {
       );
     }
     return Promise.resolve(
-      `The Folio has been insert successfuly for the id_cart: ${id_cart}, folio: ${insertedQuot.data.folio}, user: ${id_user}`,
+      `The Folio has been insert successfuly for the id_cart: ${id_cart}, folio: ${insertedQuot.data.folio}, user: ${id_user}-${sellerName}`,
     );
   }
   listPrices(costo: number): { precio: number; margen: number }[] {
@@ -384,7 +388,7 @@ export class SockeEventsService {
     let contador = 1;
     for (const margen of comision) {
       const precio = costo / (100 / margen) + costo;
-      listaPrecios.push({ name: precio, margen: margen });
+      listaPrecios.push({ precio: precio, margen: margen });
       contador = contador + 1;
     }
 

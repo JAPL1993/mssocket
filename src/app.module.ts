@@ -6,6 +6,7 @@ import { MicrosipModule } from './microsip/microsip.module';
 import { SocketModule } from './socket/socket.module';
 import { HttpAxiosModule } from './http-axios/http-axios.module';
 import { LoggerModule } from './logger/logger.module';
+import { KnexconnectionModule } from './knexconnection/knexconnection.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { LoggerModule } from './logger/logger.module';
     SocketModule,
     HttpAxiosModule,
     LoggerModule,
+    KnexconnectionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -17,7 +17,7 @@ export class KnexconnectionService {
               port : 3306,
               user : 'faguiar_back_laravel',
               password : 'compufax_back',
-              database : 'faguiar_back_laravel_compras'
+              database : 'faguiar_back_laravel'
             }
           });
         this.logger.log('info','knex conn')

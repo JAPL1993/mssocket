@@ -48,7 +48,7 @@ constructor(
             } else {
                 console.log("entro al esle para api backendcotifast")
                 const ResponseNode = await this.API.postNode("api/compras/EntregadoStatus", {"ArrayStatusChange": resStatus['data']['data']});
-                console.log(ResponseNode);
+                console.log(ResponseNode['data']);
             }
         }
     }

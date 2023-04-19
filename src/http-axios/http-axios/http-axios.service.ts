@@ -14,6 +14,6 @@ export class HttpAxiosService {
     });
   }
   postMicrosip(endpoint: string, data: any): Promise<AxiosResponse> {
-    return axios.post(`http://192.168.10.210:8080/${endpoint}`, data);
+    return axios.post(`http://localhost:8080/${endpoint}`, data);
   }
 }

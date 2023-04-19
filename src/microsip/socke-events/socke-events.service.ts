@@ -7,6 +7,8 @@ import { Logger } from 'winston';
 @Injectable()
 export class SockeEventsService {
   private logger: Logger;
+  private eventQueue = [];
+  private isQueueProcessing = false;
   constructor(
     @Inject(SocketService) private readonly socket: SocketService,
     @Inject(HttpAxiosService) private httpService: HttpAxiosService,
@@ -16,16 +18,31 @@ export class SockeEventsService {
       logName: 'Inser Microsip Service',
       level: 'info',
     });
+    this.eventQueue = [];
+    this.isQueueProcessing = false;
     const handlers = {
-      insertFolio: this.handlerInsertFolio,
+      insertFolio: (data: any) => {
+        this.eventQueue.push(data);
+        if (!this.isQueueProcessing) {
+          this.processEventQueue();
+        }
+      },
     };
     Object.keys(handlers).forEach((eventName) => {
       const handler = handlers[eventName];
-      socket.socket.on(eventName, (data: any) => handler(data, httpService));
+      socket.socket.on(eventName, (data: any) => handler(data));
     });
   }
+  private async processEventQueue() {
+    this.isQueueProcessing = true;
+    while (this.eventQueue.length > 0) {
+      const data = this.eventQueue.shift();
+      await this.handlerInsertFolio(data, this.httpService);
+    }
+    this.isQueueProcessing = false;
+  }
   //Handler Events
-  handlerInsertFolio = (data: any, httpService: HttpAxiosService) => {
+  handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
     this.logger.info('Starting InserMS Process');
     httpService
       .postNode('api/shoppingCart/cartSearch', data)

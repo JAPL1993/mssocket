@@ -13,7 +13,7 @@ export class SocketService {
       level: 'info',
     });
     this.logger.info('Connecting to socket server...');
-    this.socket = io.connect('http://localhost:8085/microsip');
+    this.socket = io.connect('http://162.214.164.60:8085/microsip');
     this.socket.on('connect', () =>
       this.logger.log('info', 'The conection has been successfuly stablished', {
         data: 'excelente',

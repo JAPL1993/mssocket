@@ -46,7 +46,7 @@ constructor(
             if (resStatus['data']['status'] === '400' || resStatus['data']['status'] === '201') {
                 console.log("nada que actualizar", resStatus['data']['msg']);
             } else {
-                console.log("entro al esle para api backendcotifast",resStatus['data'])
+                console.log("entro al esle para api backendcotifast")
                 const ResponseNode = await this.API.postNode("api/compras/EntregadoStatus", {"ArrayStatusChange": resStatus['data']['data']});
                 console.log(ResponseNode);
             }

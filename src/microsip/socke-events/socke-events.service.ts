@@ -47,15 +47,21 @@ export class SockeEventsService {
     httpService
       .postNode('api/shoppingCart/cartSearch', data)
       .then((respose) => {
+        this.socket.socket.emit('beginInsertion', respose.data.data);
         this.msInsertFolio(respose.data.data, httpService)
-          .then((result) => this.logger.info(result))
-          .catch((result) =>
-            this.logger.error('Error while inserting the data', result),
-          );
+          .then((result) => {
+            this.socket.socket.emit('successInsertion', data);
+            this.logger.info(result);
+          })
+          .catch((result) => {
+            this.socket.socket.emit('errorInsertion', data);
+            this.logger.error('Error while inserting the data', result);
+          });
       })
-      .catch((error) =>
-        this.logger.error('Error while fetching data from Node backend', error),
-      );
+      .catch((error) => {
+        this.socket.socket.emit('errorInsertion', data);
+        this.logger.error('Error while fetching data from Node backend', error);
+      });
   };
   //Methods for inserction
   async msInsertFolio(data: any, httpService: HttpAxiosService): Promise<any> {
@@ -72,7 +78,9 @@ export class SockeEventsService {
       products,
       id_user,
     } = data[0];
-    const microsipDescription = `${id_cart} | ${description == null ? "" : description}`;
+    const microsipDescription = `${id_cart} | ${
+      description == null ? '' : description
+    }`;
     const sellerName =
       `${seller.name_seller} ${seller.last_name_seller}`.toLocaleUpperCase();
     const idCustomerMS = customer.id_customer_microsip;
@@ -135,7 +143,7 @@ export class SockeEventsService {
     const objAux: any = {};
     //juntar los articulos de la misma referencia para juntar las cantidades y aparezcan las unidades del producto en general y no individualmente
     for (const value of products) {
-      value['reference'] = value['reference'].trim()
+      value['reference'] = value['reference'].trim();
       if (value['reference'] == 'SINCOD') {
         //codigo para agrupar articulos SINCOD
         if (value['sku'] in objAux) {

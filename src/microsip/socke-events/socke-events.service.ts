@@ -341,8 +341,9 @@ export class SockeEventsService {
       folio: insertedQuot.data.folio,
       id_user: id_user,
     };
+    console.log(dataResponse);
     const insertedNode: any = await httpService.postNode(
-      'api/shoppingCart/insertDataMS',
+      'api/microsip/insertDataMS',
       {
         response_array: [dataResponse],
         response_error: [],

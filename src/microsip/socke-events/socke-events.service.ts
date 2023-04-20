@@ -343,7 +343,7 @@ export class SockeEventsService {
     };
     console.log(dataResponse);
     const insertedNode: any = await httpService.postNode(
-      'api/microsip/insertDataMS',
+      'api/shoppingCart/insertDataMS',
       {
         response_array: [dataResponse],
         response_error: [],

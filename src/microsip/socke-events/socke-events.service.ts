@@ -43,25 +43,24 @@ export class SockeEventsService {
   }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
-    this.logger.info('Starting InserMS Process');
-    httpService
-      .postNode('api/shoppingCart/cartSearch', data)
-      .then((respose) => {
-        this.socket.socket.emit('beginInsertion', respose.data.data);
-        this.msInsertFolio(respose.data.data, httpService)
-          .then((result) => {
-            this.socket.socket.emit('successInsertion', data);
-            this.logger.info(result);
-          })
-          .catch((result) => {
-            this.socket.socket.emit('errorInsertion', data);
-            this.logger.error('Error while inserting the data', result);
-          });
-      })
-      .catch((error) => {
-        this.socket.socket.emit('errorInsertion', data);
+    try {
+      this.logger.info('Starting InserMS Process');
+      const response = await httpService.postNode(
+        'api/shoppingCart/cartSearch',
+        data,
+      );
+      this.socket.socket.emit('beginInsertion', response.data.data);
+      const result = await this.msInsertFolio(response.data.data, httpService);
+      this.socket.socket.emit('successInsertion', data);
+      this.logger.info(result);
+    } catch (error) {
+      this.socket.socket.emit('errorInsertion', data);
+      if (error.response) {
         this.logger.error('Error while fetching data from Node backend', error);
-      });
+      } else {
+        this.logger.error('Error while inserting the data', error);
+      }
+    }
   };
   //Methods for inserction
   async msInsertFolio(data: any, httpService: HttpAxiosService): Promise<any> {
@@ -85,7 +84,7 @@ export class SockeEventsService {
       `${seller.name_seller} ${seller.last_name_seller}`.toLocaleUpperCase();
     const idCustomerMS = customer.id_customer_microsip;
     const sellerData = { request_token: '1234', name: sellerName };
-    console.log("Seller/createSeller");
+    console.log('Seller/createSeller');
     const insertedSeller: any = await httpService.postMicrosip(
       'Seller/createSeller',
       sellerData,
@@ -111,7 +110,7 @@ export class SockeEventsService {
       request_token: '1234',
       id_customer_microsip: idCustomerMS,
     };
-    console.log("Quotation/insertCustomerNode");
+    console.log('Quotation/insertCustomerNode');
     const insertedCustomer: any = await httpService.postMicrosip(
       'Quotation/insertCustomerNode',
       customerData,
@@ -318,7 +317,7 @@ export class SockeEventsService {
       cond_id: String(data[0].cond_id),
       dir_id: String(data[0].dir_id),
     };
-    console.log("Quotation/createQuotation");
+    console.log('Quotation/createQuotation');
     const insertedQuot: any = await httpService.postMicrosip(
       'Quotation/createQuotation',
       dataQuot,

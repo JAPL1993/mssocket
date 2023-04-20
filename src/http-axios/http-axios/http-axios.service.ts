@@ -28,7 +28,7 @@ export class HttpAxiosService {
     //VALIDAMOS LAS VARIABLES DE ENTORNO DEL ENV
     MICROSIP_API_URL = process.env.ENVIRONMENT == 'produccion' ? process.env.MICROSIP_API_URL_PROD : process.env.MICROSIP_API_URL_DEV
 
-    console.log("Connecting to API Microsip...ENVIRONMENT: "+process.env.ENVIRONMENT+ " URL: "+MICROSIP_API_URL)
+    //console.log("Connecting to API Microsip...ENVIRONMENT: "+process.env.ENVIRONMENT+ " URL: "+MICROSIP_API_URL)
     
     return axios.post(MICROSIP_API_URL+endpoint, data);
   }

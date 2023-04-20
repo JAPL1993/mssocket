@@ -85,7 +85,7 @@ export class SockeEventsService {
       `${seller.name_seller} ${seller.last_name_seller}`.toLocaleUpperCase();
     const idCustomerMS = customer.id_customer_microsip;
     const sellerData = { request_token: '1234', name: sellerName };
-
+    console.log("Seller/createSeller");
     const insertedSeller: any = await httpService.postMicrosip(
       'Seller/createSeller',
       sellerData,
@@ -111,6 +111,7 @@ export class SockeEventsService {
       request_token: '1234',
       id_customer_microsip: idCustomerMS,
     };
+    console.log("Quotation/insertCustomerNode");
     const insertedCustomer: any = await httpService.postMicrosip(
       'Quotation/insertCustomerNode',
       customerData,
@@ -317,6 +318,7 @@ export class SockeEventsService {
       cond_id: String(data[0].cond_id),
       dir_id: String(data[0].dir_id),
     };
+    console.log("Quotation/createQuotation");
     const insertedQuot: any = await httpService.postMicrosip(
       'Quotation/createQuotation',
       dataQuot,

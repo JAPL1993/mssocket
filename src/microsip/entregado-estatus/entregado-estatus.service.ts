@@ -21,8 +21,6 @@ constructor(
     async entregados(){
         //SELECT * FROM seller_cart_shoppings where status = 5 AND TypeDoctFinal is NULL AND folio_cot_ms <> "PEDIDO COMPRA"
         const pedidos = await this.knexConn.knexQuery("seller_cart_shoppings").whereNull('TypeDoctFinal').andWhere('status', 5).andWhere('folio_cot_ms', '<>', 'PEDIDO COMPRA')
-        console.log(pedidos)
-        return
         const tam: number = pedidos.length;
         if (tam > 0) {
             console.log('Devolvio algo la query');
@@ -49,7 +47,7 @@ constructor(
             } else {
                 console.log("entro al esle para api backendcotifast")
                 const ResponseNode = await this.API.postNode("api/compras/EntregadoStatus", {"ArrayStatusChange": resStatus['data']['data']});
-                console.log(ResponseNode['data']);
+                console.log(ResponseNode['data']['data']);
             }
         }
     }

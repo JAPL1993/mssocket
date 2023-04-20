@@ -1,19 +1,36 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
 
 @Injectable()
 export class HttpAxiosService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    ) {}
   postNode(endpoint: string, data: any): Promise<AxiosResponse> {
-    return axios.post(process.env.COTIFAST_API_URL_DEV+endpoint, data, {
+    let COTIFAST_API_URL: string;
+
+    //VALIDAMOS LAS VARIABLES DE ENTORNO DEL ENV
+    COTIFAST_API_URL = process.env.ENVIRONMENT == 'produccion' ? process.env.COTIFAST_API_URL_PROD : process.env.COTIFAST_API_URL_DEV
+
+    console.log("Connecting to API BackEnd Cotifast...ENVIRONMENT: "+process.env.ENVIRONMENT+ " URL: "+COTIFAST_API_URL)
+
+    return axios.post(COTIFAST_API_URL+endpoint, data, {
       headers: {
-        Authorization:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVG9kb3MiLCJpZCI6MjksImlhdCI6MTY2Mzg4ODg2NSwiZXhwIjoxNjYzODg4ODY4fQ.gDR4G_sB7dfd9jZEf6e0kfgzU0uMxdfB6gajRNINmAw',
+        Authorization: process.env.COTIFAST_API_AUTH
       },
     });
   }
+
   postMicrosip(endpoint: string, data: any): Promise<AxiosResponse> {
-    return axios.post(process.env.MICROSIP_API_URL_DEV+endpoint, data);
+    let MICROSIP_API_URL: string;
+
+    //VALIDAMOS LAS VARIABLES DE ENTORNO DEL ENV
+    MICROSIP_API_URL = process.env.ENVIRONMENT == 'produccion' ? process.env.MICROSIP_API_URL_PROD : process.env.MICROSIP_API_URL_DEV
+
+    console.log("Connecting to API Microsip...ENVIRONMENT: "+process.env.ENVIRONMENT+ " URL: "+MICROSIP_API_URL)
+    
+    return axios.post(MICROSIP_API_URL+endpoint, data);
   }
+
 }

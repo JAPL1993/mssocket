@@ -49,8 +49,10 @@ export class SockeEventsService {
         'api/shoppingCart/cartSearch',
         data,
       );
-      this.socket.socket.emit('beginInsertion', response.data.data);
-      const result = await this.msInsertFolio(response.data.data, httpService);
+      //console.log(response.data)
+      //para axios usar response.data.data para fetch usar response.data
+      this.socket.socket.emit('beginInsertion', response.data);
+      const result = await this.msInsertFolio(response.data, httpService);
       this.socket.socket.emit('successInsertion', data);
       this.logger.info(result);
     } catch (error) {

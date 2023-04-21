@@ -1,13 +1,14 @@
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class HttpAxiosService {
   constructor(
     private readonly httpService: HttpService,
     ) {}
-  postNode(endpoint: string, data: any): Promise<AxiosResponse> {
+   async postNode(endpoint: string, data: any): Promise<AxiosResponse> {
     let COTIFAST_API_URL: string;
 
     //VALIDAMOS LAS VARIABLES DE ENTORNO DEL ENV
@@ -15,11 +16,21 @@ export class HttpAxiosService {
 
     console.log("Connecting to API BackEnd Cotifast...ENVIRONMENT: "+process.env.ENVIRONMENT+ " URL: "+COTIFAST_API_URL)
 
-    return axios.post(COTIFAST_API_URL+endpoint, data, {
+   const response = await fetch(COTIFAST_API_URL+endpoint,{
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: process.env.COTIFAST_API_AUTH
+      },
+      body: JSON.stringify(data)
+    })
+    //console.log(await response.json())
+    return await response.json()
+ /*    return axios.post(COTIFAST_API_URL+endpoint, data, {
       headers: {
         Authorization: process.env.COTIFAST_API_AUTH
       },
-    });
+    }); */
   }
 
   postMicrosip(endpoint: string, data: any): Promise<AxiosResponse> {

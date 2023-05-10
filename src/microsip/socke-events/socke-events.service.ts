@@ -1,3 +1,4 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Inject } from '@nestjs/common';
 import { HttpAxiosService } from 'src/http-axios/http-axios/http-axios.service';
 import { LoggerService } from 'src/logger/logger/logger.service';
@@ -13,6 +14,7 @@ export class SockeEventsService {
     @Inject(SocketService) private readonly socket: SocketService,
     @Inject(HttpAxiosService) private httpService: HttpAxiosService,
     @Inject(LoggerService) private loggerService: LoggerService,
+    
   ) {
     this.logger = loggerService.wLogger({
       logName: 'Inser Microsip Service',
@@ -27,6 +29,12 @@ export class SockeEventsService {
           this.processEventQueue();
         }
       },
+      funarFolio: (data: any) => {
+        this.eventQueue.push(data);
+        if(!this.isQueueProcessing){
+          this.processFunarQueue();
+        }
+      }
     };
     Object.keys(handlers).forEach((eventName) => {
       const handler = handlers[eventName];
@@ -40,6 +48,15 @@ export class SockeEventsService {
       await this.handlerInsertFolio(data, this.httpService);
     }
     this.isQueueProcessing = false;
+  }
+
+  private async processFunarQueue(){
+    this.isQueueProcessing = true;
+    while (this.eventQueue.length > 0) {
+      const data = this.eventQueue.shift();
+      await this.msFunarFolio(data, this.httpService);
+    }
+    this.isQueueProcessing = false;    
   }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
@@ -370,6 +387,22 @@ export class SockeEventsService {
     return Promise.resolve(
       `The Folio has been insert successfuly for the id_cart: ${id_cart}, folio: ${insertedQuot.data.folio}, user: ${id_user}-${sellerName}`,
     );
+  }
+
+  async msFunarFolio(data: any, httpService: HttpAxiosService): Promise<any>{
+    console.log("ejecucion de funarFolio: ", data)
+    console.log(data.folio_ms)
+    const folioMS =  data.folio_ms
+/*     const resStatus = await httpService.postMicrosip("Quotation/delivered", folioMS);
+
+    if (resStatus['data']['status'] === '400' || resStatus['data']['status'] === '201') {
+        console.log("nada que actualizar", resStatus['data']['msg']);
+    } else {
+        console.log("entro al esle para api backendcotifast", resStatus.data.data)
+        const ResponseNode = await httpService.postNode("api/compras/EntregadoStatus", {"ArrayStatusChange": resStatus.data.data});
+        console.log(ResponseNode);
+    } */
+
   }
   listPrices(costo: number): { precio: number; margen: number }[] {
     let comision: number[] = [];

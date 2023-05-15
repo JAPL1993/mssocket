@@ -9,7 +9,9 @@ import { Logger } from 'winston';
 export class SockeEventsService {
   private logger: Logger;
   private eventQueue = [];
+  private eventQueue2 = [];
   private isQueueProcessing = false;
+  private isQueueProcessingF = false;
   constructor(
     @Inject(SocketService) private readonly socket: SocketService,
     @Inject(HttpAxiosService) private httpService: HttpAxiosService,
@@ -21,7 +23,9 @@ export class SockeEventsService {
       level: 'info',
     });
     this.eventQueue = [];
+    this.eventQueue2 = [];
     this.isQueueProcessing = false;
+    this.isQueueProcessingF = false;
     const handlers = {
       insertFolio: (data: any) => {
         this.eventQueue.push(data);
@@ -30,8 +34,8 @@ export class SockeEventsService {
         }
       },
       funarFolio: (data: any) => {
-        this.eventQueue.push(data);
-        if(!this.isQueueProcessing){
+        this.eventQueue2.push(data);
+        if(!this.isQueueProcessingF){
           this.processFunarQueue();
         }
       }
@@ -51,12 +55,12 @@ export class SockeEventsService {
   }
 
   private async processFunarQueue(){
-    this.isQueueProcessing = true;
-    while (this.eventQueue.length > 0) {
-      const data = this.eventQueue.shift();
+    this.isQueueProcessingF = true;
+    while (this.eventQueue2.length > 0) {
+      const data = this.eventQueue2.shift();
       await this.msFunarFolio(data, this.httpService);
     }
-    this.isQueueProcessing = false;    
+    this.isQueueProcessingF = false;    
   }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
@@ -391,17 +395,24 @@ export class SockeEventsService {
 
   async msFunarFolio(data: any, httpService: HttpAxiosService): Promise<any>{
     console.log("ejecucion de funarFolio: ", data)
-    console.log(data.folio_ms)
-    const folioMS =  data.folio_ms
-/*     const resStatus = await httpService.postMicrosip("Quotation/delivered", folioMS);
+    console.log(data.folio)
+    const folioMS =  {
+      "request":"1234",
+      "folio":data.folio,
+      "id_order":data.id_cart
+    }
+    let responseData = {}
+    const resStatus = await httpService.postMicrosip("Quotation/cancelOrder", folioMS);
+    console.log(resStatus.data);
+    if(resStatus.data.status == "400" ){
+      responseData = {'id_cart':data.id_cart,'action':0,"userMod":data.userMod};
+    }
+    else{
+      responseData = {'id_cart':data.id_cart, 'action':1,"userMod":data.userMod};
+    }
 
-    if (resStatus['data']['status'] === '400' || resStatus['data']['status'] === '201') {
-        console.log("nada que actualizar", resStatus['data']['msg']);
-    } else {
-        console.log("entro al esle para api backendcotifast", resStatus.data.data)
-        const ResponseNode = await httpService.postNode("api/compras/EntregadoStatus", {"ArrayStatusChange": resStatus.data.data});
-        console.log(ResponseNode);
-    } */
+    const cancelUpdate = await httpService.postNode('/sellerQuotation/cancelUpdate',responseData);
+    console.log(cancelUpdate.data);
 
   }
   listPrices(costo: number): { precio: number; margen: number }[] {

@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Inject } from '@nestjs/common';
+import { clearConfigCache } from 'prettier';
 import { HttpAxiosService } from 'src/http-axios/http-axios/http-axios.service';
 import { LoggerService } from 'src/logger/logger/logger.service';
 import { SocketService } from 'src/socket/socket/socket.service';
@@ -394,26 +395,30 @@ export class SockeEventsService {
   }
 
   async msFunarFolio(data: any, httpService: HttpAxiosService): Promise<any>{
-    console.log("ejecucion de funarFolio: ", data)
-    console.log(data.folio)
-    const folioMS =  {
-      "request":"1234",
-      "folio":data.folio,
-      "id_order":data.id_cart
-    }
-    let responseData = {}
-    const resStatus = await httpService.postMicrosip("Quotation/cancelOrder", folioMS);
-    console.log(resStatus.data);
-    if(resStatus.data.status == "400" ){
-      responseData = {'id_cart':data.id_cart,'action':0,"userMod":data.userMod};
-    }
-    else{
-      responseData = {'id_cart':data.id_cart, 'action':1,"userMod":data.userMod};
-    }
+    try {
+      console.log("ejecucion de funarFolio: ", data)
+      console.log(data.folio)
+      const folioMS =  {
+        "request":"1234",
+        "folio":data.folio,
+        "id_order":data.id_cart
+      }
+      let responseData = {}
+      const resStatus = await httpService.postMicrosip("Quotation/cancelOrder", folioMS);
+      console.log(resStatus.data);
+      if(resStatus.data.status == "400" ){
+        responseData = {"id_cart":data.id_cart,"action":0,"userMod":parseInt(data.userMod)};
+      }
+      else{
+        responseData = {"id_cart":data.id_cart,"action":1,"userMod":parseInt(data.userMod)};
+      }
+      console.log(responseData);
+      const cancelUpdate = await httpService.postNode('api/sellerQuotation/cancelUpdate',responseData);
+      console.log(cancelUpdate.data);
 
-    const cancelUpdate = await httpService.postNode('/sellerQuotation/cancelUpdate',responseData);
-    console.log(cancelUpdate.data);
-
+    } catch (error) {
+      console.log(error);
+    }
   }
   listPrices(costo: number): { precio: number; margen: number }[] {
     let comision: number[] = [];

@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 @Injectable()
 export class HttpAxiosService {
   constructor(private readonly httpService: HttpService) {}
-  async postNode(endpoint: string, data: any): Promise<AxiosResponse> {
+  async postNode(endpoint: string, data: any): Promise<any> {
     let COTIFAST_API_URL: string;
 
     //VALIDAMOS LAS VARIABLES DE ENTORNO DEL ENV
@@ -30,7 +30,7 @@ export class HttpAxiosService {
       },
       body: JSON.stringify(data),
     });
-    //console.log(await response.json())
+    //console.log(response.json())
     return await response.json();
     /*    return axios.post(COTIFAST_API_URL+endpoint, data, {
       headers: {

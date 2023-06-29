@@ -1,5 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Inject } from '@nestjs/common';
+import { AxiosPromise } from 'axios';
+import { resolve} from 'path';
 import { clearConfigCache } from 'prettier';
 import { HttpAxiosService } from 'src/http-axios/http-axios/http-axios.service';
 import { LoggerService } from 'src/logger/logger/logger.service';
@@ -11,8 +13,10 @@ export class SockeEventsService {
   private logger: Logger;
   private eventQueue = [];
   private eventQueue2 = [];
+  private eventQueueUpdate = [];
   private isQueueProcessing = false;
   private isQueueProcessingF = false;
+  private isQueueUpdateProcessing = false;
   constructor(
     @Inject(SocketService) private readonly socket: SocketService,
     @Inject(HttpAxiosService) private httpService: HttpAxiosService,
@@ -25,8 +29,10 @@ export class SockeEventsService {
     });
     this.eventQueue = [];
     this.eventQueue2 = [];
+    this.eventQueueUpdate = [];
     this.isQueueProcessing = false;
     this.isQueueProcessingF = false;
+    this.isQueueUpdateProcessing = false;
     const handlers = {
       insertFolio: (data: any) => {
         this.eventQueue.push(data);
@@ -39,7 +45,13 @@ export class SockeEventsService {
         if(!this.isQueueProcessingF){
           this.processFunarQueue();
         }
-      }
+      },
+      respuestaMicrosip:(data:any)=>{
+        this.eventQueueUpdate.push(data);
+        if(!this.isQueueUpdateProcessing){
+          this.processUpdateMicrosip();
+        }
+      },
     };
     Object.keys(handlers).forEach((eventName) => {
       const handler = handlers[eventName];
@@ -63,6 +75,15 @@ export class SockeEventsService {
     }
     this.isQueueProcessingF = false;    
   }
+
+  private async processUpdateMicrosip(){
+    this.isQueueUpdateProcessing = true;
+    while(this.eventQueueUpdate.length > 0){
+      const data = this.eventQueueUpdate.shift();
+      await this.handlerMicrosip(data,this.httpService);
+    }
+    this.isQueueUpdateProcessing = false; 
+  }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
     try {
@@ -84,6 +105,15 @@ export class SockeEventsService {
       } else {
         this.logger.error('Error while inserting the data', error);
       }
+    }
+  };
+  //Prueba
+  handlerMicrosip = async (data: any, httpService: HttpAxiosService) => {
+    try {
+      const result = await this.updateDataMicrosip(data,httpService);
+      
+    } catch (error) {
+      console.log(error);
     }
   };
   //Methods for inserction
@@ -420,6 +450,45 @@ export class SockeEventsService {
       console.log(error);
     }
   }
+
+  async updateDataMicrosip(data:any,httpService:HttpAxiosService):Promise<any>{
+    console.log('todo goood: ',data['id_cart'],' ',data['id_user_mod']," ",data['id_window']);
+    
+      //logica de negocio
+      const dataReturn = await httpService.postMicrosip(
+        'Quotation/updateProductOrder',
+        {
+          request:"1234",
+          references:data.data
+        }
+      );
+      if(dataReturn.data.status != "200"){
+        //Evento disparar requotProveedor
+        this.socket.socket.emit('triggerRequotProv', {
+          "id_cart":data['id_cart'],
+          "idUser":data['id_user_mod'],
+          "id_window":data['id_window'],
+        });
+        return Promise.reject('Error al obtener iformación de los artículos Microsip');
+      }
+      const dataUpdate = {
+        dataProd:dataReturn.data.data,
+        idUser:data['id_user_mod'],
+        id_cart:data['id_cart'],
+        id_window:data['id_window'],
+      }
+      //Endpoint Node actualizar artículos de microsip
+      const resNode:any = await httpService.postNode('api/microsip/updateDataMicrosip',dataUpdate);
+      
+      if(resNode.status != 'success'){
+        return Promise.reject(
+          `Error al actualizar iformación de los artículos Microsip`,
+        );
+      }
+      
+      return Promise.resolve('todo goood: ');
+  }
+
   listPrices(costo: number): { precio: number; margen: number }[] {
     let comision: number[] = [];
     const listaPrecios: any[] = [];

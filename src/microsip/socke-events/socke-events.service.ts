@@ -14,9 +14,11 @@ export class SockeEventsService {
   private eventQueue = [];
   private eventQueue2 = [];
   private eventQueueUpdate = [];
+  private eventQueueOneProduct = [];
   private isQueueProcessing = false;
   private isQueueProcessingF = false;
   private isQueueUpdateProcessing = false;
+  private isQueueOneProduct = false;
   constructor(
     @Inject(SocketService) private readonly socket: SocketService,
     @Inject(HttpAxiosService) private httpService: HttpAxiosService,
@@ -30,9 +32,11 @@ export class SockeEventsService {
     this.eventQueue = [];
     this.eventQueue2 = [];
     this.eventQueueUpdate = [];
+    this.eventQueueOneProduct = [];
     this.isQueueProcessing = false;
     this.isQueueProcessingF = false;
     this.isQueueUpdateProcessing = false;
+    this.isQueueOneProduct = false;
     const handlers = {
       insertFolio: (data: any) => {
         this.eventQueue.push(data);
@@ -50,6 +54,12 @@ export class SockeEventsService {
         this.eventQueueUpdate.push(data);
         if(!this.isQueueUpdateProcessing){
           this.processUpdateMicrosip();
+        }
+      },
+      updateOneProdMS:(data:any)=>{
+        this.eventQueueOneProduct.push(data);
+        if(!this.isQueueOneProduct){
+          this.processOneMicrosip();
         }
       },
     };
@@ -84,6 +94,15 @@ export class SockeEventsService {
     }
     this.isQueueUpdateProcessing = false; 
   }
+
+  private async processOneMicrosip(){
+    this.isQueueOneProduct = true;
+    while(this.eventQueueOneProduct.length > 0){
+      const data = this.eventQueueOneProduct.shift();
+      await this.handlerOneMicrosip(data,this.httpService);
+    }
+    this.isQueueOneProduct = false; 
+  }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
     try {
@@ -111,6 +130,15 @@ export class SockeEventsService {
   handlerMicrosip = async (data: any, httpService: HttpAxiosService) => {
     try {
       const result = await this.updateDataMicrosip(data,httpService);
+      
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  handlerOneMicrosip = async (data: any, httpService: HttpAxiosService) => {
+    try {
+      const result = await this.updateOneDataMicrosip(data,httpService);
       
     } catch (error) {
       console.log(error);
@@ -479,6 +507,44 @@ export class SockeEventsService {
       }
       //Endpoint Node actualizar artículos de microsip
       const resNode:any = await httpService.postNode('api/microsip/updateDataMicrosip',dataUpdate);
+      
+      if(resNode.status != 'success'){
+        return Promise.reject(
+          `Error al actualizar iformación de los artículos Microsip`,
+        );
+      }
+      
+      return Promise.resolve('todo goood: ');
+  }
+
+  async updateOneDataMicrosip(data:any,httpService:HttpAxiosService):Promise<any>{
+    console.log('todo goood: ',data['id_user_mod']," ",data['id_window']," ",data['data']);
+    
+      //logica de negocio
+      const dataReturn = await httpService.postMicrosip(
+        'Quotation/updateProductOrder',
+        {
+          request:"1234",
+          references:data.data
+        }
+      );
+      if(dataReturn.data.status != "200"){
+        //Evento disparar requotProveedor
+        this.socket.socket.emit('triggerOneUpdate', {
+          "idUser":data['id_user_mod'],
+          "id_window":data['id_window'],
+          "sku":data['data'][0],
+        });
+        return Promise.reject('Error al obtener iformación de los artículos Microsip');
+      }
+      const dataUpdate = {
+        dataProd:dataReturn.data.data,
+        idUser:data['id_user_mod'],
+        id_window:data['id_window'],
+        sku:data['data'][0],
+      }
+      //Endpoint Node actualizar artículos de microsip
+      const resNode:any = await httpService.postNode('api/microsip/updateOneDataMicrosip',dataUpdate);
       
       if(resNode.status != 'success'){
         return Promise.reject(

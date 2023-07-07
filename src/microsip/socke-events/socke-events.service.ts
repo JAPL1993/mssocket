@@ -183,6 +183,13 @@ export class SockeEventsService {
       insertedSeller.status == 400 ||
       insertedSeller.status == undefined
     ) {
+      const insertedNode: any = await httpService.postNode(
+        'api/shoppingCart/insertDataMS',
+        {
+          response_array: [],
+          response_error: [{id_cart:id_cart,folio:"error no agregado: creación de usuario vendedor",id_user: id_user}],
+        },
+      );
       return Promise.reject(
         `There was an error creating or getting the seller for id_cart: ${id_cart} the error can be found in the log file`,
       );
@@ -208,6 +215,13 @@ export class SockeEventsService {
       insertedCustomer.status == 400 ||
       insertedCustomer.status == undefined
     ) {
+      const insertedNode: any = await httpService.postNode(
+        'api/shoppingCart/insertDataMS',
+        {
+          response_array: [],
+          response_error: [{id_cart:id_cart,folio:"error no agregado: error al buscar usuario",id_user: id_user}],
+        },
+      );
       return Promise.reject(
         `There was an error creating or getting the customer for id_cart: ${id_cart} the error can be found in the log file`,
       );
@@ -362,6 +376,13 @@ export class SockeEventsService {
         insertedProduct.status == 400 ||
         insertedProduct.status == undefined
       ) {
+        const insertedNode: any = await httpService.postNode(
+          'api/shoppingCart/insertDataMS',
+          {
+            response_array: [],
+            response_error: [{id_cart:id_cart,folio:"error no agregado: creación de artículos",id_user: id_user}],
+          },
+        );
         return Promise.reject(
           `There was an error creating or getting the product for id_cart: ${id_cart} the error can be found in the log file`,
         );
@@ -415,6 +436,19 @@ export class SockeEventsService {
       insertedQuot.status == 400 ||
       insertedQuot.status == undefined
     ) {
+
+      let folioErrorMessage = "error no agregado - " + insertedQuot.msg
+      if(folioErrorMessage.length > 190){
+        folioErrorMessage =  folioErrorMessage.slice(0,189)
+      }
+      const insertedNode: any = await httpService.postNode(
+        'api/shoppingCart/insertDataMS',
+        {
+          response_array: [],
+          response_error: [{id_cart:id_cart,folio:folioErrorMessage,id_user: id_user}],
+        },
+      );
+
       return Promise.reject(
         `There was an error creating or getting the Quotation for id_cart: ${id_cart} the error can be found in the log file`,
       );

@@ -172,22 +172,23 @@ export class SockeEventsService {
       sellerData,
     );
     if (insertedSeller == undefined) {
-      console.log('undefined');
+      console.log('entro a undefined del usuario');
       return Promise.reject(
         `There was an error creating or getting the seller for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
     if (
-      insertedSeller.status == '400' ||
-      insertedSeller.status == 'error' ||
-      insertedSeller.status == 400 ||
-      insertedSeller.status == undefined
+      insertedSeller.data.status == '400' ||
+      insertedSeller.data.status == 'error' ||
+      insertedSeller.data.status == 400 ||
+      insertedSeller.data.status == undefined
     ) {
+      console.log("Entro en creacion usuario error")
       const insertedNode: any = await httpService.postNode(
         'api/shoppingCart/insertDataMS',
         {
           response_array: [],
-          response_error: [{id_cart:id_cart,folio:"error no agregado: creación de usuario vendedor",id_user: id_user}],
+          response_error: [{id_cart:id_cart,folio:"error no agregado - creación de usuario vendedor",id_user: id_user}],
         },
       );
       return Promise.reject(
@@ -219,7 +220,7 @@ export class SockeEventsService {
         'api/shoppingCart/insertDataMS',
         {
           response_array: [],
-          response_error: [{id_cart:id_cart,folio:"error no agregado: error al buscar usuario",id_user: id_user}],
+          response_error: [{id_cart:id_cart,folio:"error no agregado - error al buscar usuario",id_user: id_user}],
         },
       );
       return Promise.reject(
@@ -380,7 +381,7 @@ export class SockeEventsService {
           'api/shoppingCart/insertDataMS',
           {
             response_array: [],
-            response_error: [{id_cart:id_cart,folio:"error no agregado: creación de artículos",id_user: id_user}],
+            response_error: [{id_cart:id_cart,folio:"error no agregado - creación de artículos",id_user: id_user}],
           },
         );
         return Promise.reject(

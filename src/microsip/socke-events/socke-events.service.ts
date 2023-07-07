@@ -205,16 +205,17 @@ export class SockeEventsService {
       'Quotation/insertCustomerNode',
       customerData,
     );
+    //console.log(insertedCustomer)
     if (insertedCustomer == undefined) {
       return Promise.reject(
         `There was an error creating or getting the customer for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
     if (
-      insertedCustomer.status == '400' ||
-      insertedCustomer.status == 'error' ||
-      insertedCustomer.status == 400 ||
-      insertedCustomer.status == undefined
+      insertedCustomer.data.status == '400' ||
+      insertedCustomer.data.status == 'error' ||
+      insertedCustomer.data.status == 400 ||
+      insertedCustomer.data.status == undefined
     ) {
       const insertedNode: any = await httpService.postNode(
         'api/shoppingCart/insertDataMS',
@@ -366,16 +367,17 @@ export class SockeEventsService {
         'Quotation/insertProductNode',
         dProduct,
       );
+      //console.log(insertedProduct)
       if (insertedProduct == undefined) {
         return Promise.reject(
           `There was an error creating or getting the product for id_cart: ${id_cart} the error can be found in the log file`,
         );
       }
       if (
-        insertedProduct.status == '400' ||
-        insertedProduct.status == 'error' ||
-        insertedProduct.status == 400 ||
-        insertedProduct.status == undefined
+        insertedProduct.data.status == '400' ||
+        insertedProduct.data.status == 'error' ||
+        insertedProduct.data.status == 400 ||
+        insertedProduct.data.status == undefined
       ) {
         const insertedNode: any = await httpService.postNode(
           'api/shoppingCart/insertDataMS',
@@ -426,19 +428,20 @@ export class SockeEventsService {
       'Quotation/createQuotation',
       dataQuot,
     );
+    //console.log(insertedQuot)
     if (insertedQuot == undefined) {
       return Promise.reject(
         `There was an error creating or getting the Quotation for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
     if (
-      insertedQuot.status == '400' ||
-      insertedQuot.status == 'error' ||
-      insertedQuot.status == 400 ||
-      insertedQuot.status == undefined
+      insertedQuot.data.status == '400' ||
+      insertedQuot.data.status == 'error' ||
+      insertedQuot.data.status == 400 ||
+      insertedQuot.data.status == undefined
     ) {
 
-      let folioErrorMessage = "error no agregado - " + insertedQuot.msg
+      let folioErrorMessage = "error no agregado - " + insertedQuot.data.msg
       if(folioErrorMessage.length > 190){
         folioErrorMessage =  folioErrorMessage.slice(0,189)
       }

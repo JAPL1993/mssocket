@@ -4,51 +4,68 @@ import {HttpAxiosService} from '../../http-axios/http-axios/http-axios.service';
 import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexconnection.service';
 import { LoggerService } from 'src/logger/logger/logger.service';
 import { Logger } from 'winston';
+import { SocketService } from 'src/socket/socket/socket.service';
 
 
 @Injectable()
 export class CyberPuertaService {
     private logger:Logger
+    private DataEvent = [];
+    private isQueueProcessing = false;
     constructor(
         @Inject(LoggerService)
         @Inject(KnexconnectionService)
         @Inject(HttpAxiosService)
+        @Inject(SocketService)
         LoggerService:LoggerService,
         private readonly knexConn:KnexconnectionService,
-        private readonly API:HttpAxiosService
+        private readonly API:HttpAxiosService,
+        private readonly socket:SocketService
     )
     {
         this.logger = LoggerService.wLogger({
             logName:'Cron CyberPuerta',
             level:'Agregar pedidos CyberPuerta a Microsip'
         })
-    }
-    //@Cron('0 */5 * * * *')
-    async cyberPuertoToMicrosip(){
-        //Traer pedidos pendientes por entrar al ERP
-        const OrdersCyberPuerta = await this.knexConn.knexQuery('order_paids as op')
-                .where('op.is_microsip',0)
-                .whereNotNull('op.order_number')
-        //Si no hay pedido para actualizar termina la función
-        if(OrdersCyberPuerta.length > 0){
-            //Recorrer pedido
-            for (let index = 0; index < OrdersCyberPuerta.length; index++) {
-                const element = OrdersCyberPuerta[index];
-                //Buscar el id del vendedor
-                try{
-                    //Emitir evento socket empezo con un pedido
-                    const resultOrder = await this.insertEvent(element,this.API,this.knexConn);
-                    //Emitir evento socket finalizo con exito
 
-                }
-                catch(error){
-                    console.log(error);
-                    //Emitir evento socket error
-                    continue
+        this.DataEvent = [];
+        this.isQueueProcessing = false;
+
+        const _SocketEvents = {
+            insertOrderCP:(data:any)=>{
+                this.DataEvent.push(data);
+                if(!this.isQueueProcessing){
+                    this.proccesCyberToMicrosip();
                 }
             }
         }
-        
+
+        Object.keys(_SocketEvents).forEach((channel) => {
+            const handler = _SocketEvents[channel];
+            socket.socket.on(channel, (data: any) => handler(data));
+          });
+    }
+
+    private async proccesCyberToMicrosip(){
+        this.isQueueProcessing = true;
+        while(this.DataEvent.length > 0){
+            const data  = this.DataEvent.shift();
+            await this.cyberPuertoToMicrosip(data,this.API,this.knexConn);
+        }
+        this.isQueueProcessing = false;
+    }
+    //@Cron('0 */5 * * * *')
+    async cyberPuertoToMicrosip(element:any,httpService:HttpAxiosService,knexConn:KnexconnectionService){
+        try{
+            //Emitir evento socket empezo con un pedido
+            const resultOrder = await this.insertEvent(element,httpService,knexConn);
+            //Emitir evento socket finalizo con exito
+
+        }
+        catch(error){
+            console.log(error);
+            //Emitir evento socket error
+        }
     }
 
     private async insertEvent(
@@ -71,14 +88,6 @@ export class CyberPuertaService {
         const _idSellerMS = dataSeller.data.id_seller;
         //Obtener id del cliente
         const _idCustomerMS = 24547;
-        //Traer los articulos del pedido
-        const products = await knex.knexQuery('product_to_buys as pt')
-                                .innerJoin('products as p',function(){
-                                    this.on('pt.product_reference',"=","p.reference")
-                                        .on("p.id_supplier","=",1)
-                                })
-                                .where('pt.id_order_paid',data.id)
-                                .select('pt.*','p.cost','p.name')
         
         //Preparar los datos para agregar el pedido en microsip
         let arraySupplier = [];
@@ -95,8 +104,8 @@ export class CyberPuertaService {
         const orderNumber:string = String(data.order_reference)
         const customerId:string = String(_idCustomerMS)
 
-        for (let i = 0; i < products.length; i++) {
-            const product = products[i];
+        for (let i = 0; i < data.products.length; i++) {
+            const product = data.products[i];
             arraySupplier.push(product.id_supplier_ps);
             arrayQuantity.push(product.quantity);
             arrayName.push(product.name);
@@ -104,7 +113,7 @@ export class CyberPuertaService {
             arrayCosts.push(product.cost);
             arrayNotes.push(".");
             arrayCreate.push(1);
-            arrayReference.push(product.product_reference);
+            arrayReference.push(product.reference);
         }
 
         //insertar pedido de microsip
@@ -153,7 +162,7 @@ export class CyberPuertaService {
           }
           //actualizar pedido success
           await knex.knexQuery('order_paids')
-          .where('id',data.id)
+          .where('id',data.id_order)
           .update({
             is_microsip:1
           })

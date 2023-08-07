@@ -106,11 +106,13 @@ export class CyberPuertaService {
 
         for (let i = 0; i < data.products.length; i++) {
             const product = data.products[i];
+            const priceProduct = Number(product.price).toFixed(2);
+            const costo = Number(product.cost).toFixed(2);
             arraySupplier.push(product.id_supplier_ps);
             arrayQuantity.push(product.quantity);
             arrayName.push(product.name);
-            arrayPrices.push(product.price);
-            arrayCosts.push(product.cost);
+            arrayPrices.push(priceProduct.toString());
+            arrayCosts.push(costo.toString());
             arrayNotes.push(".");
             arrayCreate.push(1);
             arrayReference.push(product.reference);

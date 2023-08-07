@@ -8,10 +8,11 @@ import { ScheduleModule  } from '@nestjs/schedule';
 import { EntregadoEstatusService } from './entregado-estatus/entregado-estatus.service';
 import { KnexconnectionModule } from 'src/knexconnection/knexconnection.module';
 import { CyberPuertaService } from './cyber-puerta/cyber-puerta.service';
+import { ProductsService } from './products/products.service';
 
 @Module({
   controllers: [SocketController],
   imports: [SocketModule, HttpAxiosModule, LoggerModule, ScheduleModule.forRoot(), KnexconnectionModule],
-  providers: [SockeEventsService, EntregadoEstatusService, CyberPuertaService],
+  providers: [SockeEventsService, EntregadoEstatusService, CyberPuertaService, ProductsService],
 })
 export class MicrosipModule {}

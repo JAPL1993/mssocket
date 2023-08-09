@@ -74,11 +74,19 @@ export class CyberPuertaService {
         knex:KnexconnectionService
     ):Promise<any>
     {
+
+        /* const orderReference = await knex.knexQuery('order_paids')
+            .first('order_number')
+            .where('id',data.id_order)
+        
+        console.log(orderReference.order_number)
+        return true; */
+
         const dataSeller = await httpService.postMicrosip(
             "Seller/createSeller",
             {
                 request_token:"1234",
-                name:"VENTASWEB1"
+                name:"CYBERPUERTA"
             });
         //validar respuesta
         if(dataSeller.data.status == "400"){
@@ -88,6 +96,10 @@ export class CyberPuertaService {
         const _idSellerMS = dataSeller.data.id_seller;
         //Obtener id del cliente
         const _idCustomerMS = 24547;
+
+        const orderReference = await knex.knexQuery('order_paids')
+            .first('order_number')
+            .where('id',data.id_order)
         
         //Preparar los datos para agregar el pedido en microsip
         let arraySupplier = [];
@@ -130,9 +142,9 @@ export class CyberPuertaService {
             fecha:new Date().toLocaleDateString('es-MX'),
             total:total,
             vendedo_id:idVendedor,
-            descrip:orderRef,
+            descrip:orderReference.order_number + " - " +orderRef,
             arrayNotas:arrayNotes.join("|"),
-            orderNumberMS:orderNumber,
+            orderNumberMS:orderReference.order_number,
             nameArray:arrayName.join("|"),
             CheckProdMS:arrayCreate.join("|"),
             cond_id:"0",

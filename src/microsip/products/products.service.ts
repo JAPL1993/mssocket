@@ -7,6 +7,7 @@ import { Logger } from 'winston';
 import { Cron } from '@nestjs/schedule';
 import { response } from 'express';
 import { DateTime } from 'luxon';
+import { on } from 'events';
 
 @Injectable()
 export class ProductsService {
@@ -25,6 +26,29 @@ export class ProductsService {
   //@Cron('0 */1 * * * *')
   async insertProduct() {
     try {
+      /* const pricesMicrosip = await this.httpConn.postMicrosip(
+        'Product/pricesProduct',
+        {
+          request_token: '1234',
+          reference: 'XRN-21-801',
+        },
+      );
+      console.log(pricesMicrosip.data);
+      for (const key in pricesMicrosip.data) {
+        const objAux = pricesMicrosip.data[key];
+        for (let i = 0; i < objAux.precioLista.length; i++) {
+          const element = objAux.precioLista[i];
+          //validar si existe el id
+          const existe = await this.knexconn
+            .knexQuery('seller_microsip_prices')
+            .select('id')
+            .where('name', element.name)
+            .where('id_microsip',key)
+            console.log(existe)
+            break;
+        }
+      } */
+      return true;
       //traer todos los artículos de microsip que tienen un id_product_ms
       const productMicrosip = await this.knexconn
         .knexQuery('products')
@@ -48,11 +72,7 @@ export class ProductsService {
           /**Continua si el id del artículo de microsip ya existe en la
            * BD Compufax.
            */
-          if (
-            productMicrosip.includes(
-              element.id_product_ms
-            )
-          ) {
+          if (productMicrosip.includes(element.id_product_ms)) {
             continue;
           }
           //EN EL CASO DE QUE NO EXISTA CREARLO
@@ -73,10 +93,9 @@ export class ProductsService {
           const today = DateTime.now().setZone('America/Chihuahua').toString();
 
           let fechaUltComp = null;
-          if(element.ult_fech_comp.length > 0){
-            fechaUltComp = DateTime.fromISO(element.ult_fech_comp)
+          if (element.ult_fech_comp.length > 0) {
+            fechaUltComp = DateTime.fromISO(element.ult_fech_comp);
             fechaUltComp = fechaUltComp.toISODate();
-            break;
           }
 
           //Insertar en la tabla products el nuevo artículo
@@ -105,24 +124,30 @@ export class ProductsService {
             dollar_cost: dollar_cost,
             cost_tc_microsip: cost,
             total_quantity: total_quantity,
-            warranty:element.garantia ? element.garantia:'',
-            last_date_bought:element.ult_fech_comp,
-            last_cost_bought:element.ult_cost_comp,
-            id_product_ms:element.id_product_ms
+            warranty: element.garantia ? element.garantia : '',
+            last_date_bought: element.ult_fech_comp,
+            last_cost_bought: element.ult_cost_comp,
+            id_product_ms: element.id_product_ms,
           });
 
           /**Insertar la información del artículo con respecto
            * al almacen.
            */
           await this.knexconn.knexQuery('product_warehouses').insert({
-            id_warehouse:555,
-            id_product:idProduct,
-            quantity:element.quantity,
-            created_at:today,
-            updated_at:today
-          })
+            id_warehouse: 555,
+            id_product: idProduct,
+            quantity: element.quantity,
+            created_at: today,
+            updated_at: today,
+          });
           /**Insertar los precios de lista */
-          
+          /* const pricesMicrosip = await this.httpConn.postMicrosip('Product/pricesProduct',{
+            "request_token":"1234",
+            "reference":reference
+          });
+          if(pricesMicrosip.status != 200){
+            
+          } */
           //Consultar la información de Icecat
 
           //Si no existe una imagen con el numero de parte del artículo, se agrega.

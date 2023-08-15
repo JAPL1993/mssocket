@@ -24,7 +24,9 @@ export class ProductsService {
   ) {
     this.logger = loggerService.wLogger({ logName: 'Cronjob', level: 'info' });
   }
-  @Cron('0 15,30,15 10,14,17 * * *')
+  /* @Cron('0 0 * * 1-6', {
+    timeZone: 'your-timezone',
+  }) */
   async insertProduct() {
     try {
       console.log("inicio")

@@ -8,7 +8,7 @@ import { HttpAxiosModule } from './http-axios/http-axios.module';
 import { LoggerModule } from './logger/logger.module';
 import { KnexconnectionModule } from './knexconnection/knexconnection.module';
 import { ConfigModule } from '@nestjs/config';
-
+import { ProductsService } from './microsip/products/products.service';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -22,6 +22,7 @@ import { ConfigModule } from '@nestjs/config';
     KnexconnectionModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+
+  providers: [AppService,ProductsService],
 })
 export class AppModule {}

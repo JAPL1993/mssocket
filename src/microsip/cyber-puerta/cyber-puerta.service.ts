@@ -5,6 +5,7 @@ import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexcon
 import { LoggerService } from 'src/logger/logger/logger.service';
 import { Logger } from 'winston';
 import { SocketService } from 'src/socket/socket/socket.service';
+import { get } from 'http';
 
 
 @Injectable()
@@ -180,5 +181,17 @@ export class CyberPuertaService {
           })
           console.log(insertedOrder.data);
           return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
+    }
+
+    async cyberpuertaInvoices(){
+        console.log("invoices endpoint")
+        let getOrders  = await this.knexConn.knexQuery('shoppings as sp')
+        .where("sp.order_reference", 'like', '%CFX%')
+        .andWhere("sp.is_invoiced", 0);
+        if(getOrders == "")
+        {
+            return {messsage: "no hay facturas pendientes"}
+        }
+        return getOrders
     }
 }

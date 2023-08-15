@@ -94,8 +94,8 @@ export class CyberPuertaService {
         }
         //Obtener el id del vendedor
         const _idSellerMS = dataSeller.data.id_seller;
-        //Obtener id del cliente
-        const _idCustomerMS = 24547;
+        //Obtener id del cliente cyberpuerta 25283 ventas plublico 24547
+        const _idCustomerMS = 25283;
 
         const orderReference = data.order_number
         

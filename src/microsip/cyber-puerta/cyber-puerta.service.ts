@@ -6,6 +6,7 @@ import { LoggerService } from 'src/logger/logger/logger.service';
 import { Logger } from 'winston';
 import { SocketService } from 'src/socket/socket/socket.service';
 import { get } from 'http';
+import axios, { AxiosResponse } from 'axios';
 
 
 @Injectable()
@@ -192,6 +193,30 @@ export class CyberPuertaService {
         {
             return {messsage: "no hay facturas pendientes"}
         }
+        //peticion de info a C#
+
+        //envio de facturar a cyberpuerta
+        let invoiceInfo= {
+            order_number: "WS254623",
+            invoice_uuid: "19a6ed65-8422-11ea-9e7f-42010a80000a"
+        }
+        let headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': "Bearer "+process.env.CYBERPUERTA_TOKEN,
+            'x-mock-match-request-body': 'true'
+            }
+        let body = JSON.stringify(invoiceInfo)
+        let url = process.env.CYBERPUERTA_URL+"order/cfdi"
+        try{
+            const response = await axios.post(url, body, {headers})
+            console.log(response)
+            //update shopping is:invoiced a 1
+            this.knexConn.knexQuery('shoppings as sp').update('is_invoiced', 1).where('order_reference', invoiceInfo.order_number)
+        }catch(error){
+            return error.response.data
+        }
+        
         return getOrders
     }
 }

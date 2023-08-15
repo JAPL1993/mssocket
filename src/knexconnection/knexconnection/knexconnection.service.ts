@@ -5,9 +5,20 @@ import { Logger } from 'winston';
 @Injectable()
 export class KnexconnectionService {
     private logger : Logger
+    private conn : any
     constructor(@Inject(LoggerService) loggerService: LoggerService) {
         this.logger = loggerService.wLogger({logName: 'DataBase Connection', level:'info'})
-        this.logger.log('info','Se creo el constructor')
+        this.logger.log('info','Se creo el constructor para KNEX')
+        this.conn = require('knex')({
+          client: 'mysql',
+          connection: {
+            host : process.env.ENVIRONMENT == "produccion" ? process.env.HOST_DB_PROD : process.env.HOST_DB_DEV,
+            port : 3306,
+            user : process.env.ENVIRONMENT == "produccion" ? process.env.USER_DB_PROD : process.env.USER_DB_DEV,
+            password : process.env.ENVIRONMENT == "produccion" ? process.env.PASSWORD_DB_PROD : process.env.PASSWORD_DB_DEV,
+            database : process.env.ENVIRONMENT == "produccion" ? process.env.DATABASE_DB_PROD : process.env.DATABASE_DB_DEV
+          }
+        });
     }
     knexQuery(table : string){
       let HOST_DB_PROD: string;
@@ -21,7 +32,7 @@ export class KnexconnectionService {
       PASSWORD_DB_PROD = process.env.ENVIRONMENT == "produccion" ? process.env.PASSWORD_DB_PROD : process.env.PASSWORD_DB_DEV;
       DATABASE_DB_PROD = process.env.ENVIRONMENT == "produccion" ? process.env.DATABASE_DB_PROD : process.env.DATABASE_DB_DEV;
 
-        const knex = require('knex')({
+       /*  const knex = require('knex')({
             client: 'mysql',
             connection: {
               host : HOST_DB_PROD,
@@ -30,8 +41,8 @@ export class KnexconnectionService {
               password : PASSWORD_DB_PROD,
               database : DATABASE_DB_PROD
             }
-          });
+          }); */
         this.logger.log('info','knex conn: '+DATABASE_DB_PROD+ ' ENVIRONMENT: '+process.env.ENVIRONMENT)
-        return knex.from(table)
+        return this.conn.from(table)
     }
 }

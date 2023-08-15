@@ -97,9 +97,7 @@ export class CyberPuertaService {
         //Obtener id del cliente
         const _idCustomerMS = 24547;
 
-        const orderReference = await knex.knexQuery('order_paids')
-            .first('order_number')
-            .where('id',data.id_order)
+        const orderReference = data.order_number
         
         //Preparar los datos para agregar el pedido en microsip
         let arraySupplier = [];
@@ -142,9 +140,9 @@ export class CyberPuertaService {
             fecha:new Date().toLocaleDateString('es-MX'),
             total:total,
             vendedo_id:idVendedor,
-            descrip:orderReference.order_number + " - " +orderRef,
+            descrip:orderReference + " - " +orderRef,
             arrayNotas:arrayNotes.join("|"),
-            orderNumberMS:orderReference.order_number,
+            orderNumberMS:orderReference,
             nameArray:arrayName.join("|"),
             CheckProdMS:arrayCreate.join("|"),
             cond_id:"0",

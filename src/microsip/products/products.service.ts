@@ -8,6 +8,7 @@ import { Cron } from '@nestjs/schedule';
 import { response } from 'express';
 import { DateTime } from 'luxon';
 import { on } from 'events';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class ProductsService {
@@ -15,40 +16,18 @@ export class ProductsService {
 
   constructor(
     @Inject(LoggerService)
-    @Inject(KnexconnectionService)
-    @Inject(HttpAxiosService)
     loggerService: LoggerService,
+    //@Inject(KnexconnectionService)
     private readonly knexconn: KnexconnectionService,
+    @Inject(HttpAxiosService)
     private readonly httpConn: HttpAxiosService,
   ) {
     this.logger = loggerService.wLogger({ logName: 'Cronjob', level: 'info' });
   }
-  //@Cron('0 */1 * * * *')
+  @Cron('0 15,30,15 10,14,17 * * *')
   async insertProduct() {
     try {
-      /* const pricesMicrosip = await this.httpConn.postMicrosip(
-        'Product/pricesProduct',
-        {
-          request_token: '1234',
-          reference: 'XRN-21-801',
-        },
-      );
-      console.log(pricesMicrosip.data);
-      for (const key in pricesMicrosip.data) {
-        const objAux = pricesMicrosip.data[key];
-        for (let i = 0; i < objAux.precioLista.length; i++) {
-          const element = objAux.precioLista[i];
-          //validar si existe el id
-          const existe = await this.knexconn
-            .knexQuery('seller_microsip_prices')
-            .select('id')
-            .where('name', element.name)
-            .where('id_microsip',key)
-            console.log(existe)
-            break;
-        }
-      } */
-      return true;
+      console.log("inicio")
       //traer todos los artículos de microsip que tienen un id_product_ms
       const productMicrosip = await this.knexconn
         .knexQuery('products')
@@ -66,12 +45,14 @@ export class ProductsService {
 
       if (MicrosipArt.data.products.length > 0) {
         //traer todos los SKUs de las imagenes
+        console.log("traer imagenes")
         const img_array = await image_reference(this.knexconn);
         for (let i = 0; i < MicrosipArt.data.products.length; i++) {
           const element = MicrosipArt.data.products[i];
           /**Continua si el id del artículo de microsip ya existe en la
            * BD Compufax.
            */
+          
           if (productMicrosip.includes(element.id_product_ms)) {
             continue;
           }
@@ -97,7 +78,7 @@ export class ProductsService {
             fechaUltComp = DateTime.fromISO(element.ult_fech_comp);
             fechaUltComp = fechaUltComp.toISODate();
           }
-
+          console.log("insretar artículo",reference)
           //Insertar en la tabla products el nuevo artículo
           const idProduct = await this.knexconn.knexQuery('products').insert({
             active: 1,
@@ -133,6 +114,7 @@ export class ProductsService {
           /**Insertar la información del artículo con respecto
            * al almacen.
            */
+          console.log("Insertar almacen",idProduct[0])
           await this.knexconn.knexQuery('product_warehouses').insert({
             id_warehouse: 555,
             id_product: idProduct,
@@ -141,16 +123,97 @@ export class ProductsService {
             updated_at: today,
           });
           /**Insertar los precios de lista */
-          /* const pricesMicrosip = await this.httpConn.postMicrosip('Product/pricesProduct',{
-            "request_token":"1234",
-            "reference":reference
-          });
-          if(pricesMicrosip.status != 200){
-            
-          } */
-          //Consultar la información de Icecat
+          const pricesMicrosip = await this.httpConn.postMicrosip(
+            'Product/pricesProduct',
+            {
+              request_token: '1234',
+              reference: reference,
+            },
+          );
+          console.log("insertar precios")
+          if (
+            Object.keys(pricesMicrosip.data).length != 0 &&
+            pricesMicrosip.data.constructor === Object
+          ) {
+            for (const key in pricesMicrosip.data) {
+              const objAux = pricesMicrosip.data[key];
+              for (let i = 0; i < objAux.precioLista.length; i++) {
+                const elementP = objAux.precioLista[i];
 
-          //Si no existe una imagen con el numero de parte del artículo, se agrega.
+                const existe = await this.knexconn
+                  .knexQuery('seller_microsip_prices')
+                  .select('id')
+                  .where('name', elementP.nombre)
+                  .where('id_microsip', key);
+
+                if (existe.length == 0) {
+                  await this.knexconn
+                    .knexQuery('seller_microsip_prices')
+                    .insert({
+                      reference: reference,
+                      price_microsip: elementP.precio,
+                      name: elementP.nombre,
+                      position: elementP.posicion,
+                      id_microsip: key,
+                      created_at: today,
+                      updated_at: today,
+                    });
+                }
+              }
+            }
+          }
+          //Consultar la información de Icecat
+          const resIcecat = await callIcecat(element.brand,reference, this.knexconn);
+          //const resIcecat = await callIcecat('CANON', '0667C001AA', this.knexconn);
+          //const resIcecat = await callIcecat('CANON', 'foefwefisfo', this.knexconn);
+          console.log("icecat")
+          if (resIcecat) {
+            let barCode = '';
+            if (resIcecat['data'].hasOwnProperty('GeneralInfo')) {
+              if (resIcecat['data']['GeneralInfo'].hasOwnProperty('GTIN')) {
+                if (resIcecat['data']['GeneralInfo']['GTIN'].length > 0) {
+                  barCode = resIcecat['data']['GeneralInfo']['GTIN'][0];
+                }
+              }
+            }
+            let img_url = resIcecat['data']['Image']['HighPic'];
+            let gallery = resIcecat['data']['Gallery'];
+
+            //actualizar los datos
+            console.log(img_url)
+            console.log(barCode)
+            console.log(idProduct[0])
+            await this.knexconn
+              .knexQuery('products')
+              .where('id_product', idProduct[0])
+              .update({
+                img_url: img_url,
+                barcode: barCode,
+                is_icecat:1,
+              });
+            //Si no existe una imagen con el numero de parte del artículo, se agrega.
+            console.log("PONER IMAGEN")
+            if (img_array.includes(reference)) {
+              console.log("Entro a poner imagen")
+              for (let i = 0; i < gallery.length; i++) {
+                const elementI = gallery[i];
+                console.log("imagenGaleria",elementI)
+                let img =
+                elementI['Pic500x500'] != ''
+                    ? elementI['Pic500x500']
+                    : elementI['Pic'];
+                if(!img){
+                  continue;
+                }
+                await this.knexconn.knexQuery('product_images').insert({
+                  product_reference:reference,
+                  url_image:img,
+                  created_at:today,
+                  updated_at:today,
+                })
+              }
+            }
+          }
         }
       }
       console.log('fin insertar articulos');
@@ -185,4 +248,46 @@ const image_reference = async (knexConn: KnexconnectionService) => {
     .pluck('product_reference');
 
   return array_images;
+};
+
+const callIcecat = async (brand, sku, knexConn: KnexconnectionService) => {
+  //hacer llamada sin el codigo de barras
+  let url = generateUrlIcecat(brand, sku, '');
+  const resultSku = await fetch(url);
+  const jsonResponse = await resultSku.json();
+  //responde por sku y marca ?
+  if (jsonResponse.hasOwnProperty('msg')) {
+    return jsonResponse;
+  }
+  //traer el codigo de barra del artículo
+  const barcode = await knexConn
+    .knexQuery('products')
+    .first('barcode')
+    .whereNot('id_supplier', 1)
+    .whereNot('barcode', '')
+    .where('reference', sku)
+    .orderBy('id_supplier');
+
+  if (barcode) {
+    url = generateUrlIcecat(brand, sku, barcode.barcode);
+    const resultCode = await fetch(url);
+    const responseCode = await resultCode.json();
+    if (responseCode.hasOwnProperty('msg')) {
+      return responseCode;
+    }
+    return false;
+  }
+
+  return false;
+};
+
+const generateUrlIcecat = (brand, sku, barcode) => {
+  const baseUrl = 'https://live.icecat.biz/api/?UserName=Compufax&Language=es&';
+
+  const restUrl =
+    barcode == ''
+      ? 'Brand=' + brand + '&ProductCode=' + sku
+      : 'GTIN=' + barcode;
+
+  return baseUrl + restUrl;
 };

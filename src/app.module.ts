@@ -24,8 +24,8 @@ import { CyberPuertaService } from './microsip/cyber-puerta/cyber-puerta.service
     LoggerModule,
     KnexconnectionModule,
   ],
-  controllers: [AppController, cyberPuertaController],
+  controllers: [AppController],
 
-  providers: [AppService,ProductsService, CyberPuertaService],
+  providers: [AppService,ProductsService],
 })
 export class AppModule {}

@@ -7,7 +7,7 @@ import { Logger } from 'winston';
 import { SocketService } from 'src/socket/socket/socket.service';
 import { get } from 'http';
 import axios, { AxiosResponse } from 'axios';
-
+import { DateTime } from "luxon";
 
 @Injectable()
 export class CyberPuertaService {
@@ -56,7 +56,7 @@ export class CyberPuertaService {
         }
         this.isQueueProcessing = false;
     }
-    //@Cron('0 */5 * * * *')
+
     async cyberPuertoToMicrosip(element:any,httpService:HttpAxiosService,knexConn:KnexconnectionService){
         try{
             //Emitir evento socket empezo con un pedido
@@ -180,43 +180,70 @@ export class CyberPuertaService {
           .update({
             is_microsip:1
           })
+          await knex.knexQuery('shoppings')
+          .where('order_reference',orderReference)
+          .update({
+            folio_ms: insertedOrder.data.folio
+          })
           console.log(insertedOrder.data);
           return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
     }
 
+
     async cyberpuertaInvoices(){
         console.log("invoices endpoint")
+        const today = DateTime.now().setZone("America/Chihuahua").toString();
         let getOrders  = await this.knexConn.knexQuery('shoppings as sp')
-        .where("sp.order_reference", 'like', '%CFX%')
-        .andWhere("sp.is_invoiced", 0);
+        .where("sp.id_reseller", process.env.ID_CYBERPUERTA)
+        .andWhere("sp.is_invoiced", 0).select('sp.folio_ms');
+        const folios = getOrders.map((objeto: { folio_ms: string; }) => objeto.folio_ms);
+        this.logger.info('Se ejecuto cron de facturas cyberpuerta: '+today)
         if(getOrders == "")
         {
             return {messsage: "no hay facturas pendientes"}
         }
         //peticion de info a C#
+        const responseMS = await this.API.postMicrosip("Quotation/folioSAT",{req_token:"1234", folioMS:folios});
+        const facturasMS = responseMS.data
 
-        //envio de facturar a cyberpuerta
-        let invoiceInfo= {
-            order_number: "WS254623",
-            invoice_uuid: "19a6ed65-8422-11ea-9e7f-42010a80000a"
+        if(facturasMS.data == ""){
+            return {message: "endpoint MS no trajo pedidos"}
         }
-        let headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': "Bearer "+process.env.CYBERPUERTA_TOKEN,
-            'x-mock-match-request-body': 'true'
+        console.log(facturasMS.data)
+        for (let index = 0; index < facturasMS.data.length; index++) {
+            const element = facturasMS.data[index];
+            console.log(element.folioCompufax)
+            if(element.folioSat == ""){
+                //update a cancelado
+                continue;
             }
-        let body = JSON.stringify(invoiceInfo)
-        let url = process.env.CYBERPUERTA_URL+"order/cfdi"
-        try{
-            const response = await axios.post(url, body, {headers})
-            console.log(response)
-            //update shopping is:invoiced a 1
-            this.knexConn.knexQuery('shoppings as sp').update('is_invoiced', 1).where('order_reference', invoiceInfo.order_number)
-        }catch(error){
-            return error.response.data
+            let invoiceInfo= {
+                order_number: element.folioCompufax,
+                invoice_uuid: element.folioSat
+            }
+            let headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': "Bearer "+process.env.CYBERPUERTA_TOKEN,
+                'x-mock-match-request-body': 'true'
+                }
+            let body = JSON.stringify(invoiceInfo)
+            let url = process.env.CYBERPUERTA_URL+"order/cfdi"
+            try{
+                const response = await axios.post(url, body, {headers})           
+                //update shopping is:invoiced a 1
+                if(response.status == 200){
+                let updateInfo={
+                    is_invoiced: 1,
+                    invoice_uuid: element.folioSat
+                }
+                await this.knexConn.knexQuery('shoppings').update(updateInfo).where('order_reference', element.folioCompufax)
+            }
+            }catch(error){
+                return error.response.data
+            }    
         }
-        
-        return getOrders
+        //envio de facturar a cyberpuerta  
+        return {message: "se han enviado las facturas"}
     }
 }

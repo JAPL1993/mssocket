@@ -147,7 +147,7 @@ export class CyberPuertaService {
             orderNumberMS:orderReference,
             nameArray:arrayName.join("|"),
             CheckProdMS:arrayCreate.join("|"),
-            cond_id:"0",
+            cond_id:"1902",
             dir_id:"0",
         }
 

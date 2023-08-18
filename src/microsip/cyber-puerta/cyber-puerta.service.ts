@@ -79,8 +79,7 @@ export class CyberPuertaService {
 
         /* const orderReference = await knex.knexQuery('order_paids')
             .first('order_number')
-            .where('id',data.id_order)
-        
+            .where('id',data.id_order)       
         console.log(orderReference.order_number)
         return true; */
 
@@ -150,7 +149,6 @@ export class CyberPuertaService {
             cond_id:"1902",
             dir_id:"0",
         }
-
         //insertar pedido
         console.log(dataInsert);
         const insertedOrder: any = await httpService.postMicrosip(
@@ -159,45 +157,44 @@ export class CyberPuertaService {
         );
         if (insertedOrder == undefined) {
             return Promise.reject(
-              `There was an error creating or getting the Quotation for order: ${data.order_reference} the error can be found in the log file`,
+            `There was an error creating or getting the Quotation for order: ${data.order_reference} the error can be found in the log file`,
             );
-          }
-          if (
+        }
+        if (
             insertedOrder.data.status == '400' ||
             insertedOrder.data.status == 'error' ||
             insertedOrder.data.status == 400 ||
             insertedOrder.data.status == undefined
-          ) {
+        ) {
             //actualizar pedido con error
             console.log(insertedOrder.data.msg)
             return Promise.reject(
                 `There was an error creating or getting the Quotation for order: ${data.order_reference} the error can be found in the log file`,
-              );
-          }
+            );
+        }
           //actualizar pedido success
-          await knex.knexQuery('order_paids')
-          .where('id',data.id_order)
-          .update({
-            is_microsip:1
-          })
-          await knex.knexQuery('shoppings')
-          .where('order_reference',orderReference)
-          .update({
-            folio_ms: insertedOrder.data.folio
-          })
-          console.log(insertedOrder.data);
-          return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
+        await knex.knexQuery('order_paids')
+        .where('id',data.id_order)
+        .update({
+        is_microsip:1
+        })
+        await knex.knexQuery('shoppings')
+        .where('order_reference',orderReference)
+        .update({
+        folio_ms: insertedOrder.data.folio
+        })
+        console.log(insertedOrder.data);
+        return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
     }
 
-
+    @Cron('0 00,30 13,18 * * *')
     async cyberpuertaInvoices(){
-        console.log("invoices endpoint")
+        this.logger.info('ejecutando CronJob Facturas Cyberpuerta')
         const today = DateTime.now().setZone("America/Chihuahua").toString();
         let getOrders  = await this.knexConn.knexQuery('shoppings as sp')
         .where("sp.id_reseller", process.env.ID_CYBERPUERTA)
-        .andWhere("sp.is_invoiced", 0).select('sp.folio_ms');
+        .andWhere("sp.is_invoiced", 0).andWhere("sp.status", 1).select('sp.folio_ms');
         const folios = getOrders.map((objeto: { folio_ms: string; }) => objeto.folio_ms);
-        this.logger.info('Se ejecuto cron de facturas cyberpuerta: '+today)
         if(getOrders == "")
         {
             return {messsage: "no hay facturas pendientes"}
@@ -205,17 +202,21 @@ export class CyberPuertaService {
         //peticion de info a C#
         const responseMS = await this.API.postMicrosip("Quotation/folioSAT",{req_token:"1234", folioMS:folios});
         const facturasMS = responseMS.data
-
         if(facturasMS.data == ""){
-            return {message: "endpoint MS no trajo pedidos"}
+            this.logger.info('endpoint MS no hay pedidios a facturar')
+            return {message: "endpoint MS no hay pedidios a facturar"}
         }
-        console.log(facturasMS.data)
         for (let index = 0; index < facturasMS.data.length; index++) {
             const element = facturasMS.data[index];
-            console.log(element.folioCompufax)
             if(element.folioSat == ""){
                 //update a cancelado
-                continue;
+                let updatecancel={
+                    status: 0,
+                    is_invoiced: 0,
+                    updated_at: today
+                }
+                await this.knexConn.knexQuery('shoppings').update(updatecancel).where('folio_ms', element.folioMicrosip)
+                continue
             }
             let invoiceInfo= {
                 order_number: element.folioCompufax,
@@ -231,19 +232,22 @@ export class CyberPuertaService {
             let url = process.env.CYBERPUERTA_URL+"order/cfdi"
             try{
                 const response = await axios.post(url, body, {headers})           
-                //update shopping is:invoiced a 1
-                if(response.status == 200){
+                //update shopping is:invoiced a 1              
                 let updateInfo={
                     is_invoiced: 1,
-                    invoice_uuid: element.folioSat
+                    invoice_uuid: element.folioSat,
+                    updated_at: today
                 }
-                await this.knexConn.knexQuery('shoppings').update(updateInfo).where('order_reference', element.folioCompufax)
-            }
+                await this.knexConn.knexQuery('shoppings').update(updateInfo).where('folio_ms', element.folioMicrosip)
+                this.logger.info('Se envio factura a CP de order: '+invoiceInfo.order_number+' status http: '+response.status)
+            
             }catch(error){
+                this.logger.info('error en envio de factura CP: '+JSON.stringify(error.response.data)+' order_reference'+invoiceInfo.order_number)
                 return error.response.data
             }    
         }
-        //envio de facturar a cyberpuerta  
+        //envio de facturar a cyberpuerta 
+        this.logger.info('Se han envidado facturas a cyberpuerta') 
         return {message: "se han enviado las facturas"}
     }
 }

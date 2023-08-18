@@ -9,8 +9,6 @@ import { LoggerModule } from './logger/logger.module';
 import { KnexconnectionModule } from './knexconnection/knexconnection.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductsService } from './microsip/products/products.service';
-import { cyberPuertaController } from './microsip/cyber-puerta/cyber-puerta.controller';
-import { CyberPuertaService } from './microsip/cyber-puerta/cyber-puerta.service';
 
 @Module({
   imports: [
@@ -22,7 +20,7 @@ import { CyberPuertaService } from './microsip/cyber-puerta/cyber-puerta.service
     SocketModule,
     HttpAxiosModule,
     LoggerModule,
-    KnexconnectionModule,
+    KnexconnectionModule
   ],
   controllers: [AppController],
 

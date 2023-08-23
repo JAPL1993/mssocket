@@ -324,7 +324,7 @@ export class SockeEventsService {
 
       for (const row of listaPricesMS) {
         const rprice = Number(row['precio']).toFixed(2);
-        const rmargin = Number(row['margen']).toFixed(2);
+        const rmargin = row['margen'];
         pricesStrInsertMS.push(rprice.toString());
         marginStrInsertMS.push(rmargin.toString());
       }

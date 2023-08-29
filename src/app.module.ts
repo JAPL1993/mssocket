@@ -24,6 +24,6 @@ import { ProductsService } from './microsip/products/products.service';
   ],
   controllers: [AppController],
 
-  providers: [AppService,ProductsService],
+  providers: [AppService],
 })
 export class AppModule {}

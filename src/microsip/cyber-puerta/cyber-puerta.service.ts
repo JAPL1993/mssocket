@@ -87,7 +87,7 @@ export class CyberPuertaService {
             "Seller/createSeller",
             {
                 request_token:"1234",
-                name:"CYBERPUERTA"
+                name:data.seller_name,
             });
         //validar respuesta
         if(dataSeller.data.status == "400"){
@@ -96,7 +96,7 @@ export class CyberPuertaService {
         //Obtener el id del vendedor
         const _idSellerMS = dataSeller.data.id_seller;
         //Obtener id del cliente cyberpuerta 25283 ventas plublico 24547
-        const _idCustomerMS = 25283;
+        const _idCustomerMS = data.customerMsId;
 
         const orderReference = data.order_number
         
@@ -146,7 +146,7 @@ export class CyberPuertaService {
             orderNumberMS:orderReference,
             nameArray:arrayName.join("|"),
             CheckProdMS:arrayCreate.join("|"),
-            cond_id:"1902",
+            cond_id:data.condId.toString(),
             dir_id:"0",
         }
         //insertar pedido

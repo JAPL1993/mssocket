@@ -27,6 +27,7 @@ export class ProductsService {
   /* @Cron('0 0 * * 1-6', {
     timeZone: 'your-timezone',
   }) */
+  @Cron('0 00,00 10,15 * * *')
   async insertProduct() {
     try {
       console.log("inicio")

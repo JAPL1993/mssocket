@@ -8,6 +8,8 @@ import { SocketService } from 'src/socket/socket/socket.service';
 import { get } from 'http';
 import axios, { AxiosResponse } from 'axios';
 import { DateTime } from "luxon";
+import { clearConfigCache } from 'prettier';
+import { btoa } from 'buffer';
 
 @Injectable()
 export class CyberPuertaService {
@@ -194,12 +196,16 @@ export class CyberPuertaService {
         return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
     }
 
-    @Cron('0 00,30 13,18 * * *')
+    @Cron('0 30,30 13,18 * * *')
     async cyberpuertaInvoices(){
         this.logger.info('ejecutando CronJob Facturas Cyberpuerta')
         const today = DateTime.now().setZone("America/Chihuahua").toString();
         let getOrders  = await this.knexConn.knexQuery('shoppings as sp')
-        .where("sp.id_reseller", process.env.ID_CYBERPUERTA)
+        .whereNotNull("sp.folio_ms")
+        .andWhere(function(){
+            this.where('sp.id_reseller',2)
+            .orWhere('sp.id_reseller',3)
+        })
         .andWhere("sp.is_invoiced", 0).andWhere("sp.status", 1).select('sp.folio_ms');
         const folios = getOrders.map((objeto: { folio_ms: string; }) => objeto.folio_ms);
         if(getOrders == "")
@@ -243,6 +249,7 @@ export class CyberPuertaService {
                 let updateInfo={
                     is_invoiced: 1,
                     invoice_uuid: element.folioSat,
+                    xml_factura:Buffer.from(element.xmlFactura.toString()).toString('base64'),
                     updated_at: today
                 }
                 await this.knexConn.knexQuery('shoppings').update(updateInfo).where('folio_ms', element.folioMicrosip)

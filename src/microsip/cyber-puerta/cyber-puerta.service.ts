@@ -196,9 +196,10 @@ export class CyberPuertaService {
         return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
     }
 
-    @Cron('0 30,30 13,18 * * *')
+    @Cron('0 00,30 13,18 * * *')
     async cyberpuertaInvoices(){
         this.logger.info('ejecutando CronJob Facturas Cyberpuerta')
+        console.log("inicio factura")
         const today = DateTime.now().setZone("America/Chihuahua").toString();
         let getOrders  = await this.knexConn.knexQuery('shoppings as sp')
         .whereNotNull("sp.folio_ms")
@@ -206,14 +207,15 @@ export class CyberPuertaService {
             this.where('sp.id_reseller',2)
             .orWhere('sp.id_reseller',3)
         })
-        .andWhere("sp.is_invoiced", 0).andWhere("sp.status", 1).select('sp.folio_ms');
+        .andWhere("sp.is_invoiced", 0).andWhere("sp.status", 1).select('sp.folio_ms','sp.id_reseller');
         const folios = getOrders.map((objeto: { folio_ms: string; }) => objeto.folio_ms);
+        const idReseller:string = getOrders.map((order:{id_reseller:number})=>order.id_reseller.toString());
         if(getOrders == "")
         {
             return {messsage: "no hay facturas pendientes"}
         }
         //peticion de info a C#
-        const responseMS = await this.API.postMicrosip("Quotation/folioSAT",{req_token:"1234", folioMS:folios});
+        const responseMS = await this.API.postMicrosip("Quotation/folioSAT",{req_token:"1234", folioMS:folios,idReseller:idReseller});
         const facturasMS = responseMS.data
         if(facturasMS.data == ""){
             this.logger.info('endpoint MS no hay pedidios a facturar')
@@ -235,25 +237,36 @@ export class CyberPuertaService {
                 order_number: element.folioCompufax,
                 invoice_uuid: element.folioSat
             }
-            let headers = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': "Bearer "+process.env.CYBERPUERTA_TOKEN,
-                'x-mock-match-request-body': 'true'
-                }
-            let body = JSON.stringify(invoiceInfo)
-            let url = process.env.CYBERPUERTA_URL+"order/cfdi"
             try{
-                const response = await axios.post(url, body, {headers})           
-                //update shopping is:invoiced a 1              
-                let updateInfo={
-                    is_invoiced: 1,
+                let updateInfo={}
+                let response;
+                if(element.id_reseller == "2" || element.id_reseller == 2){
+                    updateInfo={
+                        is_invoiced: 1,
+                        invoice_uuid: element.folioSat,
+                        updated_at: today
+                    }
+                    let headers = {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': "Bearer "+process.env.CYBERPUERTA_TOKEN,
+                        'x-mock-match-request-body': 'true'
+                        }
+                    let body = JSON.stringify(invoiceInfo)
+                    let url = process.env.CYBERPUERTA_URL+"order/cfdi"
+                
+                    response = await axios.post(url, body, {headers})  
+                    this.logger.info('Se envio factura a CP de order: '+invoiceInfo.order_number+' status http: '+response.status)
+                }
+                else{
+                    updateInfo ={ is_invoiced: 1,
                     invoice_uuid: element.folioSat,
                     xml_factura:Buffer.from(element.xmlFactura.toString()).toString('base64'),
-                    updated_at: today
+                    updated_at: today}
                 }
+                //update shopping is:invoiced a 1              
+                
                 await this.knexConn.knexQuery('shoppings').update(updateInfo).where('folio_ms', element.folioMicrosip)
-                this.logger.info('Se envio factura a CP de order: '+invoiceInfo.order_number+' status http: '+response.status)
             
             }catch(error){
                 this.logger.info('error en envio de factura CP: '+JSON.stringify(error.response.data)+' order_reference'+invoiceInfo.order_number)

@@ -121,7 +121,7 @@ export class CyberPuertaService {
             const product = data.products[i];
             let priceProduct = 0;
             if(data.seller_name == 'CREDITIENDA'){
-                priceProduct = Number(product.price);
+                priceProduct = Number(Number(product.price).toFixed(6));
             }
             else{
                 priceProduct = Number(Number(product.price).toFixed(2));

@@ -119,12 +119,13 @@ export class CyberPuertaService {
 
         for (let i = 0; i < data.products.length; i++) {
             const product = data.products[i];
-            let priceProduct = 0;
+            let priceProduct = '0';
             if(data.seller_name == 'CREDITIENDA'){
-                priceProduct = Number(Number(product.price).toFixed(6));
+                //console.log("tipo de dato: ",typeof product.price, product.price)
+                priceProduct = Number(product.price).toFixed(2);
             }
             else{
-                priceProduct = Number(Number(product.price).toFixed(2));
+                priceProduct = Number(product.price).toFixed(2);
             }
             
             const costo = Number(product.cost).toFixed(2);
@@ -196,7 +197,7 @@ export class CyberPuertaService {
         return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
     }
 
-    @Cron('0 00,30 13,18 * * *')
+    //@Cron('0 00,30 13,18 * * *')
     async cyberpuertaInvoices(){
         this.logger.info('ejecutando CronJob Facturas Cyberpuerta')
         console.log("inicio factura")
@@ -207,7 +208,7 @@ export class CyberPuertaService {
             this.where('sp.id_reseller',2)
             .orWhere('sp.id_reseller',3)
         })
-        .andWhere("sp.is_invoiced", 0).andWhere("sp.status", 1).select('sp.folio_ms','sp.id_reseller');
+        .andWhere("sp.is_invoiced", 0).andWhere("sp.status", '<>',0).select('sp.folio_ms','sp.id_reseller');
         const folios = getOrders.map((objeto: { folio_ms: string; }) => objeto.folio_ms);
         const idReseller:string = getOrders.map((order:{id_reseller:number})=>order.id_reseller.toString());
         if(getOrders == "")
@@ -270,6 +271,7 @@ export class CyberPuertaService {
             
             }catch(error){
                 this.logger.info('error en envio de factura CP: '+JSON.stringify(error.response.data)+' order_reference'+invoiceInfo.order_number)
+                continue;
                 return error.response.data
             }    
         }

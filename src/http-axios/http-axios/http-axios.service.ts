@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
 import fetch from 'node-fetch';
-
+const https = require('https');
 @Injectable()
 export class HttpAxiosService {
   constructor(private readonly httpService: HttpService) {}
@@ -21,7 +21,9 @@ export class HttpAxiosService {
         ' URL: ' +
         COTIFAST_API_URL,
     );
-
+    const agent = new https.Agent({
+      rejectUnauthorized: false, // Esto deshabilita la verificación del certificado
+    });
     const response = await fetch(COTIFAST_API_URL + endpoint, {
       method: 'POST',
       headers: {

@@ -12,7 +12,7 @@ async function bootstrap() {
     AppModule, 
   {
     snapshot: true,
-    //httpsOptions
+    httpsOptions
   });
   await app.listen(3000);
 }

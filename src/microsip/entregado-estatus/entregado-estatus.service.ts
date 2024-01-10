@@ -17,7 +17,7 @@ constructor(
     ) {
     this.logger = loggerService.wLogger({logName: 'Cronjob', level: 'info'})
     }
-    @Cron('0 */5 * * * *')
+    //@Cron('0 */5 * * * *')
     async entregados(){
         //SELECT * FROM seller_cart_shoppings where status = 5 AND TypeDoctFinal is NULL AND folio_cot_ms <> "PEDIDO COMPRA"
         const pedidos = await this.knexConn.knexQuery("seller_cart_shoppings").whereNull('TypeDoctFinal').andWhere('status', 5).andWhere('folio_cot_ms', '<>', 'PEDIDO COMPRA')

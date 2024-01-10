@@ -9,10 +9,11 @@ import { EntregadoEstatusService } from './entregado-estatus/entregado-estatus.s
 import { KnexconnectionModule } from 'src/knexconnection/knexconnection.module';
 import { CyberPuertaService } from './cyber-puerta/cyber-puerta.service';
 import { ProductsService } from './products/products.service';
+import { MicrosipReportsService } from './microsip-reports/microsip-reports.service';
 
 @Module({
   controllers: [SocketController],
   imports: [SocketModule, HttpAxiosModule, LoggerModule, ScheduleModule.forRoot(), KnexconnectionModule],
-  providers: [SockeEventsService, EntregadoEstatusService, CyberPuertaService, ProductsService],
+  providers: [SockeEventsService, EntregadoEstatusService, CyberPuertaService, ProductsService, MicrosipReportsService],
 })
 export class MicrosipModule {}

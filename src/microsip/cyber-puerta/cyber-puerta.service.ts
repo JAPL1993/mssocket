@@ -129,7 +129,7 @@ export class CyberPuertaService {
             }
             
             const costo = Number(product.cost).toFixed(2);
-            arraySupplier.push(product.id_supplier_ps);
+            arraySupplier.push(product.id_supplier);
             arrayQuantity.push(product.quantity);
             arrayName.push(product.name);
             arrayPrices.push(priceProduct.toString());

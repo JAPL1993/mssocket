@@ -108,7 +108,7 @@ export class SockeEventsService {
     try {
       this.logger.info('Starting InserMS Process');
       const response = await httpService.postNode(
-        'api/shoppingCart/cartSearch',
+        'api/shoppingCart/cartSearchForMicrosip',
         data,
       );
       //console.log(response.data)

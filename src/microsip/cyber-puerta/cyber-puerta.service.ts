@@ -197,7 +197,7 @@ export class CyberPuertaService {
         return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
     }
 
-    //@Cron('0 00,30 13,18 * * *')
+    @Cron('0 00,30 13,18 * * *')
     async cyberpuertaInvoices(){
         this.logger.info('ejecutando CronJob Facturas Cyberpuerta')
         console.log("inicio factura")

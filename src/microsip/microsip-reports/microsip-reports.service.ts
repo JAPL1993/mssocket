@@ -68,8 +68,8 @@ export class MicrosipReportsService {
     async sendReport(data:any,objHttp:HttpAxiosService):Promise<any>{
         const dir_report = await objHttp.postMicrosip('Reporte/ReportCommission',{
             request_token:"1234",
-            fechaInicio:'2022-03-01',//data.fechaInicio,
-            fechaFinal:'2022-03-28',//data.fechaFinal,
+            fechaInicio:data.fechaInicio,
+            fechaFinal:data.fechaFinal,
             vendedor:""
         });
         console.log(dir_report.data.msg);

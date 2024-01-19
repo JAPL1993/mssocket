@@ -59,7 +59,7 @@ export class MicrosipReportsService {
         } catch (error) {
             console.log(error);
             this.socket.socket.emit('returnReportError',{
-                id_user:39,
+                id_user:data.id_user,
                 error_msg:'Error al generar reporte de comisiones'
             })
         }
@@ -85,7 +85,7 @@ export class MicrosipReportsService {
         const typeMime = 'application/vnd.ms-excel';
         
         this.socket.socket.emit('returnReport',{
-            id_user:39,
+            id_user:data.id_user,
             type_file:typeMime,
             file_base64:excelFile
         })

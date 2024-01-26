@@ -71,7 +71,7 @@ export class ProductsService {
           const price = element.price.replace(',', '.');
           const cost = element.cost.replace(',', '.');
           const total_quantity =
-            Number(element.reserved) + Number(element.quantity);
+            Number(element.reserved) + Number(element.quantity) + Number(element.reservadoVentaEnLinea);
           const dollar_cost =
             element.coin == 'Dolares' ? Number(element.cost_dolar) : 0;
           const today = DateTime.now().setZone('America/Chihuahua').toString();
@@ -105,6 +105,8 @@ export class ProductsService {
             is_icecat: 0,
             is_promotion: 0,
             reserved: element.reserved,
+            reserved_ventaenlinea : element.reservadoVentaEnLinea,
+            hasventaenlinea:element.hasVentaEnLinea,
             dollar_cost: dollar_cost,
             cost_tc_microsip: cost,
             total_quantity: total_quantity,

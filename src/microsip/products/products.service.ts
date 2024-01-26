@@ -30,7 +30,7 @@ export class ProductsService {
   @Cron('0 00,00 13,15 * * *')
   async insertProduct() {
     try {
-      console.log("inicio")
+      console.log("inicio de creacion de articulos")
       //traer todos los artículos de microsip que tienen un id_product_ms
       const productMicrosip = await this.knexconn
         .knexQuery('products')
@@ -48,7 +48,6 @@ export class ProductsService {
 
       if (MicrosipArt.data.products.length > 0) {
         //traer todos los SKUs de las imagenes
-        console.log("traer imagenes")
         const img_array = await image_reference(this.knexconn);
         for (let i = 0; i < MicrosipArt.data.products.length; i++) {
           const element = MicrosipArt.data.products[i];
@@ -81,7 +80,6 @@ export class ProductsService {
             fechaUltComp = DateTime.fromISO(element.ult_fech_comp);
             fechaUltComp = fechaUltComp.toISODate();
           }
-          console.log("insretar artículo",reference)
           //Insertar en la tabla products el nuevo artículo
           const idProduct = await this.knexconn.knexQuery('products').insert({
             active: 1,
@@ -119,7 +117,6 @@ export class ProductsService {
           /**Insertar la información del artículo con respecto
            * al almacen.
            */
-          console.log("Insertar almacen",idProduct[0])
           await this.knexconn.knexQuery('product_warehouses').insert({
             id_warehouse: 555,
             id_product: idProduct,
@@ -135,7 +132,6 @@ export class ProductsService {
               reference: reference,
             },
           );
-          console.log("insertar precios")
           if (
             Object.keys(pricesMicrosip.data).length != 0 &&
             pricesMicrosip.data.constructor === Object
@@ -171,7 +167,7 @@ export class ProductsService {
           const resIcecat = await callIcecat(element.brand,reference, this.knexconn);
           //const resIcecat = await callIcecat('CANON', '0667C001AA', this.knexconn);
           //const resIcecat = await callIcecat('CANON', 'foefwefisfo', this.knexconn);
-          console.log("icecat")
+          
           if (resIcecat) {
             let barCode = '';
             if (resIcecat['data'].hasOwnProperty('GeneralInfo')) {
@@ -185,9 +181,7 @@ export class ProductsService {
             let gallery = resIcecat['data']['Gallery'];
 
             //actualizar los datos
-            console.log(img_url)
-            console.log(barCode)
-            console.log(idProduct[0])
+            
             await this.knexconn
               .knexQuery('products')
               .where('id_product', idProduct[0])
@@ -197,12 +191,12 @@ export class ProductsService {
                 is_icecat:1,
               });
             //Si no existe una imagen con el numero de parte del artículo, se agrega.
-            console.log("PONER IMAGEN")
+            
             if (img_array.includes(reference)) {
-              console.log("Entro a poner imagen")
+              
               for (let i = 0; i < gallery.length; i++) {
                 const elementI = gallery[i];
-                console.log("imagenGaleria",elementI)
+                
                 let img =
                 elementI['Pic500x500'] != ''
                     ? elementI['Pic500x500']
@@ -221,12 +215,33 @@ export class ProductsService {
           }
         }
       }
-      console.log('fin insertar articulos');
+      
     } catch (error) {
       console.log(error);
     }
   }
 
+  @Cron('0 */10 * * * *')
+  async updateMicrosipProducts(){
+    try{
+      this.logger.info('Se inicio Actualizacion de Art. de Microsip a Cotifast');
+      const MicrosipArt: any = await this.httpConn.postMicrosip(
+        'Product/syncProduct',
+        {
+          request_token: '1234',
+        },
+      );
+      this.logger.info('Peticion C#: Completa y enviada a CotifastBackend');
+      const resNode:any = await this.httpConn.postNode('api/compras/updateMicrosip',MicrosipArt.data);
+      if(resNode.status == "success"){
+        this.logger.info('Se Actualizaron los Art. de Microsip');
+      }else{
+        this.logger.error("CotifastBackend deveolvio un error", resNode)
+      }
+    }catch(error){
+      this.logger.error('Error al actualizar los Art. de Microsip', error.message);
+    }
+  }
   private validateReference(refP, refS) {
     if (refP != '' && refP != undefined) {
       if (refP.includes('#')) {

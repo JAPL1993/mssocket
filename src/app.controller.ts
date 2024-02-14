@@ -6,7 +6,8 @@ import { AppService } from './app.service';
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    /* private readonly microsipProducts: ProductsService */) {}
+    /*private readonly microsipProducts: ProductsService*/
+    ) {}
 
   @Get()
   getHello(): string {
@@ -15,7 +16,7 @@ export class AppController {
 
   /* @Get('microsip/createProducts')
   createProducts(){
-    return this.microsipProducts.insertProduct()
+    return this.microsipProducts.updateMicrosipProducts()
   } */
 
   

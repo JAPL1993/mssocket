@@ -573,7 +573,7 @@ export class SockeEventsService {
           "id_window":data['id_window'],
           "sku":data['data'][0],
         });
-        return Promise.reject('Error al obtener iformación de los artículos Microsip');
+        return Promise.reject('Error al obtener información de los artículos Microsip');
       }
       const dataUpdate = {
         dataProd:dataReturn.data.data,

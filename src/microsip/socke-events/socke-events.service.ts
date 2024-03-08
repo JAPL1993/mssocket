@@ -6,6 +6,7 @@ import { clearConfigCache } from 'prettier';
 import { HttpAxiosService } from 'src/http-axios/http-axios/http-axios.service';
 import { LoggerService } from 'src/logger/logger/logger.service';
 import { SocketService } from 'src/socket/socket/socket.service';
+import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexconnection.service';
 import { Logger } from 'winston';
 
 @Injectable()
@@ -20,9 +21,14 @@ export class SockeEventsService {
   private isQueueUpdateProcessing = false;
   private isQueueOneProduct = false;
   constructor(
-    @Inject(SocketService) private readonly socket: SocketService,
-    @Inject(HttpAxiosService) private httpService: HttpAxiosService,
-    @Inject(LoggerService) private loggerService: LoggerService,
+    @Inject(SocketService) 
+    private readonly socket: SocketService,
+    @Inject(HttpAxiosService) 
+    private httpService: HttpAxiosService,
+    @Inject(LoggerService) 
+    private loggerService: LoggerService,
+    @Inject(KnexconnectionService)
+    private readonly knexConn:KnexconnectionService
     
   ) {
     this.logger = loggerService.wLogger({
@@ -72,7 +78,14 @@ export class SockeEventsService {
     this.isQueueProcessing = true;
     while (this.eventQueue.length > 0) {
       const data = this.eventQueue.shift();
-      await this.handlerInsertFolio(data, this.httpService);
+      if(data.type == 1){
+        //Cotifast
+        await this.handlerInsertFolio(data, this.httpService);
+      }
+      else if(data.type == 2){
+        //venta en linea
+        await this.handlerSaleOnlineToMicrosip(data,this.httpService,this.knexConn);
+      }
     }
     this.isQueueProcessing = false;
   }
@@ -627,5 +640,142 @@ export class SockeEventsService {
     }
 
     return listaPrecios;
+  }
+
+  handlerSaleOnlineToMicrosip = async (element:any,httpService:HttpAxiosService,knexConn:KnexconnectionService)=>{
+      try{
+          //Emitir evento socket empezo con un pedido
+          const resultOrder = await this.insertEvent(element,httpService,knexConn);
+          //Emitir evento socket finalizo con exito
+      }
+      catch(error){
+          console.log(error);
+          //Emitir evento socket error
+      }
+  }
+
+  async insertEvent(
+      data:any,
+      httpService:HttpAxiosService,
+      knex:KnexconnectionService
+  ):Promise<any>
+  {
+
+      /* const orderReference = await knex.knexQuery('order_paids')
+          .first('order_number')
+          .where('id',data.id_order)       
+      console.log(orderReference.order_number)
+      return true; */
+
+      const dataSeller = await httpService.postMicrosip(
+          "Seller/createSeller",
+          {
+              request_token:"1234",
+              name:data.seller_name,
+          });
+      //validar respuesta
+      if(dataSeller.data.status == "400"){
+          return Promise.reject("Error seller MICROSIP")
+      }
+      //Obtener el id del vendedor
+      const _idSellerMS = dataSeller.data.id_seller;
+      //Obtener id del cliente cyberpuerta 25283 ventas plublico 24547
+      const _idCustomerMS = data.customerMsId;
+
+      const orderReference = data.order_number
+      
+      //Preparar los datos para agregar el pedido en microsip
+      let arraySupplier = [];
+      let arrayQuantity = [];
+      let arrayName = [];
+      let arrayPrices = [];
+      let arrayCosts = [];
+      let arrayNotes = [];
+      let arrayCreate = [];
+      let arrayReference = [];
+      const total:string  = String(data.total)
+      const idVendedor:string = String(_idSellerMS)
+      const orderRef:string = data.order_reference
+      const orderNumber:string = String(data.order_reference)
+      const customerId:string = String(_idCustomerMS)
+
+      for (let i = 0; i < data.products.length; i++) {
+          const product = data.products[i];
+          let priceProduct = '0';
+          if(data.seller_name == 'CREDITIENDA'){
+              //console.log("tipo de dato: ",typeof product.price, product.price)
+              priceProduct = Number(product.price).toFixed(2);
+          }
+          else{
+              priceProduct = Number(product.price).toFixed(2);
+          }
+          
+          const costo = Number(product.cost).toFixed(2);
+          arraySupplier.push(product.id_supplier);
+          arrayQuantity.push(product.quantity);
+          arrayName.push(product.name);
+          arrayPrices.push(priceProduct.toString());
+          arrayCosts.push(costo.toString());
+          arrayNotes.push(".");
+          arrayCreate.push(1);
+          arrayReference.push(product.reference);
+      }
+
+      //insertar pedido de microsip
+      const dataInsert:any = {
+          request_token:"1234",
+          supplier:arraySupplier.join(","),
+          reference:arrayReference.join(","),
+          quantity:arrayQuantity.join("|"),
+          price:arrayPrices.join("|"),
+          cost:arrayCosts.join("|"),
+          id_cli_microsip:customerId,
+          fecha:new Date().toLocaleDateString('es-MX'),
+          total:total,
+          vendedo_id:idVendedor,
+          descrip:orderReference + " - " +orderRef,
+          arrayNotas:arrayNotes.join("|"),
+          orderNumberMS:orderReference,
+          nameArray:arrayName.join("|"),
+          CheckProdMS:arrayCreate.join("|"),
+          cond_id:data.condId.toString(),
+          dir_id:"0",
+      }
+      //insertar pedido
+      console.log(dataInsert);
+      const insertedOrder: any = await httpService.postMicrosip(
+          'Quotation/createQuotation',
+          dataInsert,
+      );
+      if (insertedOrder == undefined) {
+          return Promise.reject(
+          `There was an error creating or getting the Quotation for order: ${data.order_reference} the error can be found in the log file`,
+          );
+      }
+      if (
+          insertedOrder.data.status == '400' ||
+          insertedOrder.data.status == 'error' ||
+          insertedOrder.data.status == 400 ||
+          insertedOrder.data.status == undefined
+      ) {
+          //actualizar pedido con error
+          console.log(insertedOrder.data.msg)
+          return Promise.reject(
+              `There was an error creating or getting the Quotation for order: ${data.order_reference} the error can be found in the log file`,
+          );
+      }
+        //actualizar pedido success
+      await knex.knexQuery('order_paids')
+      .where('id',data.id_order)
+      .update({
+      is_microsip:1
+      })
+      await knex.knexQuery('shoppings')
+      .where('order_reference',orderReference)
+      .update({
+      folio_ms: insertedOrder.data.folio
+      })
+      console.log(insertedOrder.data);
+      return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
   }
 }

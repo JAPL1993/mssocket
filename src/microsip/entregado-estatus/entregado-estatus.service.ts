@@ -6,7 +6,8 @@ import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexcon
 import { LoggerService } from 'src/logger/logger/logger.service';
 import { Logger } from 'winston';
 import { MicrosipModule } from '../microsip.module';
-
+import { DateTime } from 'luxon';
+import { getConfigToken } from '@nestjs/config';
 @Injectable()
 export class EntregadoEstatusService {
     private logger: Logger
@@ -50,5 +51,49 @@ constructor(
                 console.log(ResponseNode);
             }
         }
+    }
+
+    async rollbackPedidosEntregado(){
+        this.logger.info('inicio endpoint rollback a En Bodega')
+        const to = DateTime.now().setZone('America/Merida').toISODate();
+        const from = DateTime.now().minus({months: 2 }).setZone('America/Merida').toISODate();
+        const pedidos = await this.knexConn.knexQuery("seller_cart_shoppings as sp")
+        .whereNotNull("sp.folio_cot_ms")
+        .andWhere('sp.status', 6)
+        .andWhere('sp.folio_cot_ms', '<>', 'PEDIDO COMPRA')
+        .andWhere('sp.folio_cot_ms', '<>', '')
+        .whereBetween('sp.updated_at', [from, to]).select('sp.folio_cot_ms');
+        const folios = pedidos.map((element:{folio_cot_ms:string})=> element.folio_cot_ms);
+        let arrChunk = []
+        let chunkSize = 250
+        for(let i = 0; i < folios.length; i += chunkSize){
+            arrChunk.push(folios.slice(i, i + chunkSize))
+        }
+        for (let index = 0; index < arrChunk.length; index++) {
+            const arrFolios = arrChunk[index];
+            let concatFolios = ""
+            for (let j = 0; j < arrFolios.length; j++) {
+                const element = arrFolios[j];
+                concatFolios += "'"+element+"',"
+                
+            }
+            const string_sinComa_Final = concatFolios.substring(0, (concatFolios.lastIndexOf(",")))
+            try {
+                const resStatus = await this.API.postMicrosip("Quotation/rollbackEntregados", {
+                    request_token:'1234',
+                    folios:string_sinComa_Final
+                });
+            if(resStatus.data.data.length == 0){
+                this.logger.info('endpoint rollback->no hay folios para rollback')
+                continue;
+            }
+            //se actualizan los folios en base de datos -Cotifast a En Bodega
+            this.logger.info('endpoint rollback->actualizando folios '+resStatus.data.data+' a En Bodega')
+            const resUpdated = await this.knexConn.knexQuery("seller_cart_shoppings").whereIn("folio_cot_ms", resStatus.data.data).update("status", 5)
+            } catch (error) {
+                return error
+            } 
+        }
+        this.logger.info('Finalizo el endpoint rollback a En Bodega')
     }
 }

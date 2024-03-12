@@ -122,7 +122,7 @@ export class SockeEventsService {
       this.logger.info('Starting InserMS Process');
       const response = await httpService.postNode(
         'api/shoppingCart/cartSearchForMicrosip',
-        data,
+        {id_hash:data.id_hash},
       );
       //console.log(response.data)
       //para axios usar response.data.data para fetch usar response.data
@@ -645,6 +645,7 @@ export class SockeEventsService {
   handlerSaleOnlineToMicrosip = async (element:any,httpService:HttpAxiosService,knexConn:KnexconnectionService)=>{
       try{
           //Emitir evento socket empezo con un pedido
+          console.log("Entro al insert Creditienda y Cyberpuerta")
           const resultOrder = await this.insertEvent(element,httpService,knexConn);
           //Emitir evento socket finalizo con exito
       }

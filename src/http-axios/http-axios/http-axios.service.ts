@@ -49,9 +49,12 @@ export class HttpAxiosService {
       process.env.ENVIRONMENT == 'produccion'
         ? process.env.MICROSIP_API_URL_PROD
         : process.env.MICROSIP_API_URL_DEV;
-
+        const config = {
+          maxContentLength: Infinity, // Tamaño máximo permitido en bytes
+          maxBodyLength: Infinity,
+        };
     //console.log("Connecting to API Microsip...ENVIRONMENT: "+process.env.ENVIRONMENT+ " URL: "+MICROSIP_API_URL)
 
-    return axios.post(MICROSIP_API_URL + endpoint, data);
+    return axios.post(MICROSIP_API_URL + endpoint, data, config);
   }
 }

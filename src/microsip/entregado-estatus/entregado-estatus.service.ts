@@ -89,7 +89,7 @@ constructor(
             }
             //se actualizan los folios en base de datos -Cotifast a En Bodega
             this.logger.info('endpoint rollback->actualizando folios '+resStatus.data.data+' a En Bodega')
-            const resUpdated = await this.knexConn.knexQuery("seller_cart_shoppings").whereIn("folio_cot_ms", resStatus.data.data).update("status", 5)
+            const resUpdated = await this.knexConn.knexQuery("seller_cart_shoppings").whereIn("folio_cot_ms", resStatus.data.data).update({status:5, TypeDoctFinal: null})
             } catch (error) {
                 return error
             } 

@@ -9,6 +9,7 @@ import { LoggerModule } from './logger/logger.module';
 import { KnexconnectionModule } from './knexconnection/knexconnection.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductsService } from './microsip/products/products.service';
+import { ApiModule } from './api/api.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { ProductsService } from './microsip/products/products.service';
     SocketModule,
     HttpAxiosModule,
     LoggerModule,
-    KnexconnectionModule
+    KnexconnectionModule,
+    ApiModule
   ],
   controllers: [AppController],
 

@@ -10,13 +10,25 @@ export class ApiService {
         @Inject(LoggerService) loggerService : LoggerService,
         @Inject(KnexconnectionService) private readonly knexConn : KnexconnectionService,
         @Inject(HttpAxiosService) private readonly axios: HttpAxiosService
-    ){}
+    ){
+        this.logger = loggerService.wLogger({logName: 'Cronjob', level: 'info'})
+    }
 
     async createClientsMS(){
-        /* const dataRequestC = {
+        this.logger.info('inicio createOrUpdate Clientes Cronjob')
+        const dataRequestC = {
             request_token:'1234',
         };
-        await this.axios.postMicrosip("endpoint", dataRequestC)
-        await this.axios.postNode("", {"data": "data"}) */
+        const customer = await this.axios.postMicrosip("Customer/updateOrCreateCustomer", dataRequestC)
+        console.log(customer.data)
+        if(customer.data == ""){
+            this.logger.info('createOrUpdate Clientes Cronjob->nada que actualizar/crear')
+        }else{
+            this.logger.info('createOrUpdate Clientes Cronjob->Actualizando')
+            const responseNode = await this.axios.postNode("api/microsip/updateOrCreateCustomer", {"clientes": customer.data})
+            //console.log(responseNode)
+            this.logger.info("createOrUpdate Clientes Cronjob response "+responseNode.status)
+        }
+        this.logger.info('termino el createOrUpdate Clientes Cronjob')
     }
 }

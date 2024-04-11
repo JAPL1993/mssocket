@@ -9,7 +9,7 @@ export class ApiController {
 
     @Get('/createClientsMicrosip')
     async createClientMS(){
-        console.log("createClientsMicrosip");
-        return ""
+        const customerMS = await this.apiService.createClientsMS();
+        return customerMS
     }
 }

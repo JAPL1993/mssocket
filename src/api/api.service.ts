@@ -26,7 +26,10 @@ export class ApiService {
         }else{
             this.logger.info('createOrUpdate Clientes Cronjob->Actualizando')
             const responseNode = await this.axios.postNode("api/microsip/updateOrCreateCustomer", {"clientes": customer.data})
-            //console.log(responseNode)
+            if(responseNode.error){
+                this.logger.error("createOrUpdate Clientes response: "+responseNode.error)
+                return
+            }
             this.logger.info("createOrUpdate Clientes Cronjob response "+responseNode.status)
         }
         this.logger.info('termino el createOrUpdate Clientes Cronjob')

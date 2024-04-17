@@ -127,11 +127,13 @@ export class MicrosipReportsService {
     }
 
     async sendReportClient(data:any,objHttp:HttpAxiosService):Promise<any>{
+        this.logger.info("Inicio reporte utilidad por clientes de " + data.id_user + " del :" + data.fechaInicio + " - " + data.fechaFinal);
         const dir_report = await objHttp.postMicrosip('Reporte/reportClient',{
             request_token:"1234",
             fechaInicio:data.fechaInicio,
             fechaFinal:data.fechaFinal,
         });
+        this.logger.info("Finalizo reporte utilidad por clientes de " + data.id_user + " del :" + data.fechaInicio + " - " + data.fechaFinal);
         console.log(dir_report.data.msg);
         if(dir_report.data.status == "400"){
             this.logger.error('Error al generar el reporte de clientes',dir_report.data.msg);

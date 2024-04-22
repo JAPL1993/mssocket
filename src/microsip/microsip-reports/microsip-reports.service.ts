@@ -149,7 +149,9 @@ export class MicrosipReportsService {
         this.socket.socket.emit('returnReportCli',{
             id_user:data.id_user,
             type_file:typeMime,
-            file_base64:excelFile
+            file_base64:excelFile,
+            fechInc:data.fechaInicio,
+            fechFn:data.fechaFinal
         })
         return Promise.resolve(`Reporte generado`);
     }

@@ -124,10 +124,11 @@ export class SockeEventsService {
         'api/shoppingCart/cartSearchForMicrosip',
         {id_hash:data.id_hash},
       );
+      let id_window = data.id_window
       //console.log(response.data)
       //para axios usar response.data.data para fetch usar response.data
       this.socket.socket.emit('beginInsertion', response.data);
-      const result = await this.msInsertFolio(response.data, httpService);
+      const result = await this.msInsertFolio(response.data, httpService, id_window);
       this.socket.socket.emit('successInsertion', data);
       this.logger.info(result);
     } catch (error) {
@@ -158,7 +159,7 @@ export class SockeEventsService {
     }
   };
   //Methods for inserction
-  async msInsertFolio(data: any, httpService: HttpAxiosService): Promise<any> {
+  async msInsertFolio(data: any, httpService: HttpAxiosService, id_window): Promise<any> {
     if (data.length <= 0) {
       return Promise.reject('No data recived by Node Backend');
     }
@@ -462,7 +463,7 @@ export class SockeEventsService {
         'api/shoppingCart/insertDataMS',
         {
           response_array: [],
-          response_error: [{id_cart:id_cart,folio:folioErrorMessage,id_user: id_user}],
+          response_error: [{id_cart:id_cart,folio:folioErrorMessage,id_user: id_user, id_window: id_window}],
         },
       );
 
@@ -474,6 +475,7 @@ export class SockeEventsService {
       id_cart: id_cart,
       folio: insertedQuot.data.folio,
       id_user: id_user,
+      id_window: id_window
     };
     console.log(dataResponse);
     const insertedNode: any = await httpService.postNode(

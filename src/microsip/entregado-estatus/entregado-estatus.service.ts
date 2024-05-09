@@ -56,7 +56,7 @@ constructor(
     @Cron('0 25 10,17 * * *')
     async rollbackPedidosEntregado(){
         this.logger.info('inicio endpoint rollback a En Bodega')
-        const to = DateTime.now().setZone('America/Merida').toISODate();
+        const to = DateTime.now().plus({day:1}).setZone('America/Merida').toISODate();
         const from = DateTime.now().minus({months: 2 }).setZone('America/Merida').toISODate();
         const pedidos = await this.knexConn.knexQuery("seller_cart_shoppings as sp")
         .whereNotNull("sp.folio_cot_ms")

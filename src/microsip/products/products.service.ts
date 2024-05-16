@@ -9,6 +9,7 @@ import { response } from 'express';
 import { DateTime } from 'luxon';
 import { on } from 'events';
 import fetch from 'node-fetch';
+import { CLIENT_RENEG_LIMIT } from 'tls';
 
 @Injectable()
 export class ProductsService {
@@ -144,7 +145,7 @@ export class ProductsService {
                 const existe = await this.knexconn
                   .knexQuery('seller_microsip_prices')
                   .select('id')
-                  .where('name', elementP.nombre)
+                  .where('name', elementP.name)
                   .where('id_microsip', key);
 
                 if (existe.length == 0) {
@@ -152,9 +153,9 @@ export class ProductsService {
                     .knexQuery('seller_microsip_prices')
                     .insert({
                       reference: reference,
-                      price_microsip: elementP.precio,
-                      name: elementP.nombre,
-                      position: elementP.posicion,
+                      price_microsip: elementP.price,
+                      name: elementP.name,
+                      position: elementP.position,
                       id_microsip: key,
                       created_at: today,
                       updated_at: today,
@@ -258,6 +259,50 @@ export class ProductsService {
     }
 
     return '';
+  }
+  @Cron('0 00 13,18 * * *')
+  async updatePricesMicrosipNode(){
+    try {
+      this.logger
+      .info("Inicio Actualizacion de precios Microsip");
+      const ArrayPrices = await this.httpConn
+      .postMicrosip(
+        "Product/pricesProduct",
+        {request_token:"1234"}
+      );
+      this.logger
+      .info("Actualizacion Precios. Enviando informacion a Backend cotifast");
+      if(ArrayPrices['status'] == 400){
+        this.logger
+        .error(
+          "Fallo la generacion de la lista de precios a acutalizar",
+        );
+        return true;
+      }
+      const resExchangeRate = await this.httpConn
+      .postMicrosip(
+        "Product/exchangeRateMicrosip",
+        {token:"1234"}
+      )
+      const dPrice = {
+          pricesMs:ArrayPrices.data,
+          exchangeRate:resExchangeRate.data.exchange_rate
+        }
+
+      const resNodePrices = await this.httpConn
+      .postNode(
+        "api/shoppingCart/updatePricesMicrosip",
+        dPrice
+      )
+      console.log(resNodePrices);
+    } catch (error) {
+      this.logger
+      .error(
+        "Error al actualizar los precios de articulos Microsip en Cotifast",
+        error.message
+      );
+      console.log(error);
+    }
   }
 }
 

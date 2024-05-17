@@ -28,7 +28,9 @@ export class ProductsService {
   /* @Cron('0 0 * * 1-6', {
     timeZone: 'your-timezone',
   }) */
-  @Cron('0 00,00 13,15 * * *')
+  @Cron('0 00,00 13,15 * * *', {
+    disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+})
   async insertProduct() {
     try {
       console.log("inicio de creacion de articulos")
@@ -222,7 +224,9 @@ export class ProductsService {
     }
   }
 
-  @Cron('0 */10 * * * *')
+  @Cron('0 */10 * * * *', {
+    disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+})
   async updateMicrosipProducts(){
     try{
       this.logger.info('Se inicio Actualizacion de Art. de Microsip a Cotifast');
@@ -260,7 +264,9 @@ export class ProductsService {
 
     return '';
   }
-  @Cron('0 00 13,18 * * *')
+  @Cron('0 00 13,18 * * *', {
+    disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+})
   async updatePricesMicrosipNode(){
     try {
       this.logger

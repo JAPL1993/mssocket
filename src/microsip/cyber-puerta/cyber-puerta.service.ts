@@ -10,7 +10,7 @@ import axios, { AxiosResponse } from 'axios';
 import { DateTime } from "luxon";
 import { clearConfigCache } from 'prettier';
 import { btoa } from 'buffer';
-
+require('dotenv').config();
 @Injectable()
 export class CyberPuertaService {
     private logger:Logger

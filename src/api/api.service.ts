@@ -3,6 +3,7 @@ import { HttpAxiosService } from 'src/http-axios/http-axios/http-axios.service';
 import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexconnection.service';
 import { LoggerService } from 'src/logger/logger/logger.service';
 import { Logger } from 'winston';
+require('dotenv').config();
 @Injectable()
 export class ApiService {
     private logger: Logger

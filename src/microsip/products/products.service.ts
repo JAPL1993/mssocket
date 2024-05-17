@@ -10,7 +10,7 @@ import { DateTime } from 'luxon';
 import { on } from 'events';
 import fetch from 'node-fetch';
 import { CLIENT_RENEG_LIMIT } from 'tls';
-
+require('dotenv').config();
 @Injectable()
 export class ProductsService {
   private logger: Logger;

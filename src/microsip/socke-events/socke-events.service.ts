@@ -159,7 +159,7 @@ export class SockeEventsService {
     }
   };
   //Methods for inserction
-  async msInsertFolio(data: any, httpService: HttpAxiosService, id_window): Promise<any> {
+  async msInsertFolio(data: any, httpService: HttpAxiosService, id_window:any): Promise<any> {
     if (data.length <= 0) {
       return Promise.reject('No data recived by Node Backend');
     }
@@ -202,7 +202,7 @@ export class SockeEventsService {
         'api/shoppingCart/insertDataMS',
         {
           response_array: [],
-          response_error: [{id_cart:id_cart,folio:"error no agregado - creación de usuario vendedor",id_user: id_user}],
+          response_error: [{id_cart:id_cart,folio:"error no agregado - creación de usuario vendedor",id_user: id_user, id_window: id_window}],
         },
       );
       return Promise.reject(
@@ -235,7 +235,7 @@ export class SockeEventsService {
         'api/shoppingCart/insertDataMS',
         {
           response_array: [],
-          response_error: [{id_cart:id_cart,folio:"error no agregado - error al buscar usuario",id_user: id_user}],
+          response_error: [{id_cart:id_cart,folio:"error no agregado - error al buscar usuario",id_user: id_user, id_window: id_window}],
         },
       );
       return Promise.reject(
@@ -397,7 +397,7 @@ export class SockeEventsService {
           'api/shoppingCart/insertDataMS',
           {
             response_array: [],
-            response_error: [{id_cart:id_cart,folio:"error no agregado - creación de artículos",id_user: id_user}],
+            response_error: [{id_cart:id_cart,folio:"error no agregado - creación de artículos",id_user: id_user, id_window: id_window}],
           },
         );
         return Promise.reject(
@@ -454,11 +454,15 @@ export class SockeEventsService {
       insertedQuot.data.status == 400 ||
       insertedQuot.data.status == undefined
     ) {
-
       let folioErrorMessage = "error no agregado - " + insertedQuot.data.msg
       if(folioErrorMessage.length > 190){
         folioErrorMessage =  folioErrorMessage.slice(0,189)
       }
+      /*console.log("folio:",folioErrorMessage,
+        "id_cart:",id_cart,
+        "id_user:",id_user,
+        "id_window:",id_window
+      );*/
       const insertedNode: any = await httpService.postNode(
         'api/shoppingCart/insertDataMS',
         {

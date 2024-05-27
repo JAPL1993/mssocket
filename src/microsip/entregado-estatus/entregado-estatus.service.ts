@@ -8,6 +8,7 @@ import { Logger } from 'winston';
 import { MicrosipModule } from '../microsip.module';
 import { DateTime } from 'luxon';
 import { getConfigToken } from '@nestjs/config';
+require('dotenv').config();
 @Injectable()
 export class EntregadoEstatusService {
     private logger: Logger
@@ -18,7 +19,9 @@ constructor(
     ) {
     this.logger = loggerService.wLogger({logName: 'Cronjob', level: 'info'})
     }
-    @Cron('0 */5 * * * *')
+    @Cron('0 */5 * * * *', {
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+    })
     async entregados(){
         //SELECT * FROM seller_cart_shoppings where status = 5 AND TypeDoctFinal is NULL AND folio_cot_ms <> "PEDIDO COMPRA"
         const pedidos = await this.knexConn.knexQuery("seller_cart_shoppings").whereNull('TypeDoctFinal').andWhere('status', 5).andWhere('folio_cot_ms', '<>', 'PEDIDO COMPRA')
@@ -53,7 +56,9 @@ constructor(
         }
     }
     
-    @Cron('0 25 10,17 * * *')
+    @Cron('0 25 10,17 * * *', {
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+    })
     async rollbackPedidosEntregado(){
         this.logger.info('inicio endpoint rollback a En Bodega')
         const to = DateTime.now().plus({day:1}).setZone('America/Merida').toISODate();

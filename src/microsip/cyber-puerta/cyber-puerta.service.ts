@@ -10,7 +10,7 @@ import axios, { AxiosResponse } from 'axios';
 import { DateTime } from "luxon";
 import { clearConfigCache } from 'prettier';
 import { btoa } from 'buffer';
-
+require('dotenv').config();
 @Injectable()
 export class CyberPuertaService {
     private logger:Logger
@@ -32,7 +32,9 @@ export class CyberPuertaService {
         })
     }
 
-    @Cron('0 00,30 13,18 * * *')
+    @Cron('0 00,30 13,18 * * *', {
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+    })
     async cyberpuertaInvoices(){
         this.logger.info('ejecutando CronJob Facturas Cyberpuerta')
         console.log("inicio factura")

@@ -301,6 +301,8 @@ export class ProductsService {
         dPrice
       )
       console.log(resNodePrices);
+      this.logger
+      .info("Actualizacion Precios Finalizada");
     } catch (error) {
       this.logger
       .error(

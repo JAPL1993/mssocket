@@ -8,6 +8,7 @@ import { LoggerService } from 'src/logger/logger/logger.service';
 import { SocketService } from 'src/socket/socket/socket.service';
 import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexconnection.service';
 import { Logger } from 'winston';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class SockeEventsService {
@@ -16,10 +17,12 @@ export class SockeEventsService {
   private eventQueue2 = [];
   private eventQueueUpdate = [];
   private eventQueueOneProduct = [];
+  private findSku = [];
   private isQueueProcessing = false;
   private isQueueProcessingF = false;
   private isQueueUpdateProcessing = false;
   private isQueueOneProduct = false;
+  private isFindSku = false;
   constructor(
     @Inject(SocketService) 
     private readonly socket: SocketService,
@@ -39,10 +42,12 @@ export class SockeEventsService {
     this.eventQueue2 = [];
     this.eventQueueUpdate = [];
     this.eventQueueOneProduct = [];
+    this.findSku = [];
     this.isQueueProcessing = false;
     this.isQueueProcessingF = false;
     this.isQueueUpdateProcessing = false;
     this.isQueueOneProduct = false;
+    this.isFindSku = false;
     const handlers = {
       insertFolio: (data: any) => {
         this.eventQueue.push(data);
@@ -68,6 +73,12 @@ export class SockeEventsService {
           this.processOneMicrosip();
         }
       },
+      findSku:(data:any)=>{
+        this.findSku.push(data);
+        if(!this.isFindSku){
+          this.processFindSku();
+        }
+      }
     };
     Object.keys(handlers).forEach((eventName) => {
       const handler = handlers[eventName];
@@ -115,6 +126,14 @@ export class SockeEventsService {
       await this.handlerOneMicrosip(data,this.httpService);
     }
     this.isQueueOneProduct = false; 
+  }
+  private async processFindSku(){
+    this.isFindSku = true;
+    while(this.findSku.length > 0){
+      const data = this.findSku.shift();
+      await this.handlerFindSku(data,this.httpService,this.knexConn);
+    }
+    this.isFindSku = false;
   }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
@@ -475,6 +494,8 @@ export class SockeEventsService {
         `There was an error creating or getting the Quotation for id_cart: ${id_cart} the error can be found in the log file`,
       );
     }
+    //SOCKET SKU MICROSIP
+      this.socket.socket.emit('addSkuMicrosip',{id_cart});
     const dataResponse = {
       id_cart: id_cart,
       folio: insertedQuot.data.folio,
@@ -661,6 +682,14 @@ export class SockeEventsService {
       }
   }
 
+  handlerFindSku = async (data:any,httpService:HttpAxiosService,knexConn:KnexconnectionService)=>{
+    try {
+      await this.findSkuEvent(data,httpService,knexConn);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   async insertEvent(
       data:any,
       httpService:HttpAxiosService,
@@ -784,5 +813,28 @@ export class SockeEventsService {
       })
       console.log(insertedOrder.data);
       return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
+  }
+
+  async findSkuEvent(data:any,httpServ:HttpAxiosService,conn:KnexconnectionService):Promise<any>{
+    /**Traer información del Pedido*/
+    //console.log(data);
+    const resNodeSku = await httpServ.postNode("api/microsip/findSku",{id_cart:data.id_cart});
+    //console.log(resNodeSku);
+    if(resNodeSku.status == "error"){
+      //informar del error para repetir el proceso
+    }
+    /*Mandar preguntar por los SKU a Microsip*/
+    const jsonRequest = JSON.stringify(resNodeSku.skusId);
+    //console.log(jsonRequest);
+    const skusMicrosip = await httpServ.postMicrosip("Quotation/findSku",{
+      "token":"1234",
+      "skusId":jsonRequest,
+      "skus":resNodeSku.skus
+    });
+    if(skusMicrosip.status != 200){
+      //guardar en logs id cart
+    }
+    /**Devolver los SKU de microsip al cotifast*/
+    const resNode = await httpServ.postNode('api/microsip/insertSku',{"arraySku":skusMicrosip.data.arraySku})
   }
 }

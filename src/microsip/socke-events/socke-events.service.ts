@@ -9,6 +9,8 @@ import { SocketService } from 'src/socket/socket/socket.service';
 import { KnexconnectionService } from 'src/knexconnection/knexconnection/knexconnection.service';
 import { Logger } from 'winston';
 import { Cron } from '@nestjs/schedule';
+import {EventEmitter2, OnEvent} from '@nestjs/event-emitter'
+import { EntregadoEstatusService } from '../entregado-estatus/entregado-estatus.service';
 
 @Injectable()
 export class SockeEventsService {
@@ -31,8 +33,9 @@ export class SockeEventsService {
     @Inject(LoggerService) 
     private loggerService: LoggerService,
     @Inject(KnexconnectionService)
-    private readonly knexConn:KnexconnectionService
-    
+    private readonly knexConn:KnexconnectionService,
+    @Inject(EventEmitter2)
+    private eventEmitter:EventEmitter2
   ) {
     this.logger = loggerService.wLogger({
       logName: 'Inser Microsip Service',
@@ -71,12 +74,6 @@ export class SockeEventsService {
         this.eventQueueOneProduct.push(data);
         if(!this.isQueueOneProduct){
           this.processOneMicrosip();
-        }
-      },
-      findSku:(data:any)=>{
-        this.findSku.push(data);
-        if(!this.isFindSku){
-          this.processFindSku();
         }
       }
     };
@@ -126,14 +123,6 @@ export class SockeEventsService {
       await this.handlerOneMicrosip(data,this.httpService);
     }
     this.isQueueOneProduct = false; 
-  }
-  private async processFindSku(){
-    this.isFindSku = true;
-    while(this.findSku.length > 0){
-      const data = this.findSku.shift();
-      await this.handlerFindSku(data,this.httpService,this.knexConn);
-    }
-    this.isFindSku = false;
   }
   //Handler Events
   handlerInsertFolio = async (data: any, httpService: HttpAxiosService) => {
@@ -495,7 +484,9 @@ export class SockeEventsService {
       );
     }
     //SOCKET SKU MICROSIP
-      this.socket.socket.emit('addSkuMicrosip',{id_cart});
+    console.log("llego antes de mandar el evento")
+    this.eventEmitter.emit('order.addSku',id_cart);
+    console.log("Despues de mandar el evento addSkuMicrosip")
     const dataResponse = {
       id_cart: id_cart,
       folio: insertedQuot.data.folio,
@@ -682,14 +673,6 @@ export class SockeEventsService {
       }
   }
 
-  handlerFindSku = async (data:any,httpService:HttpAxiosService,knexConn:KnexconnectionService)=>{
-    try {
-      await this.findSkuEvent(data,httpService,knexConn);
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
   async insertEvent(
       data:any,
       httpService:HttpAxiosService,
@@ -702,7 +685,7 @@ export class SockeEventsService {
           .where('id',data.id_order)       
       console.log(orderReference.order_number)
       return true; */
-
+    
       const dataSeller = await httpService.postMicrosip(
           "Seller/createSeller",
           {
@@ -814,11 +797,11 @@ export class SockeEventsService {
       console.log(insertedOrder.data);
       return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
   }
-
-  async findSkuEvent(data:any,httpServ:HttpAxiosService,conn:KnexconnectionService):Promise<any>{
+  @OnEvent('order.addSku')
+  async findSkuEvent(id_cart:any){
+    console.log("inicio order.addSku",id_cart);
     /**Traer información del Pedido*/
-    //console.log(data);
-    const resNodeSku = await httpServ.postNode("api/microsip/findSku",{id_cart:data.id_cart});
+    const resNodeSku = await this.httpService.postNode("api/microsip/findSku",{id_cart:id_cart});
     //console.log(resNodeSku);
     if(resNodeSku.status == "error"){
       //informar del error para repetir el proceso
@@ -826,7 +809,7 @@ export class SockeEventsService {
     /*Mandar preguntar por los SKU a Microsip*/
     const jsonRequest = JSON.stringify(resNodeSku.skusId);
     //console.log(jsonRequest);
-    const skusMicrosip = await httpServ.postMicrosip("Quotation/findSku",{
+    const skusMicrosip = await this.httpService.postMicrosip("Quotation/findSku",{
       "token":"1234",
       "skusId":jsonRequest,
       "skus":resNodeSku.skus
@@ -835,6 +818,6 @@ export class SockeEventsService {
       //guardar en logs id cart
     }
     /**Devolver los SKU de microsip al cotifast*/
-    const resNode = await httpServ.postNode('api/microsip/insertSku',{"arraySku":skusMicrosip.data.arraySku})
+    const resNode = await this.httpService.postNode('api/microsip/insertSku',{"arraySku":skusMicrosip.data.arraySku})
   }
 }

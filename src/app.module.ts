@@ -10,6 +10,7 @@ import { KnexconnectionModule } from './knexconnection/knexconnection.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductsService } from './microsip/products/products.service';
 import { ApiModule } from './api/api.module';
+import {EventEmitterModule} from '@nestjs/event-emitter'
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { ApiModule } from './api/api.module';
     HttpAxiosModule,
     LoggerModule,
     KnexconnectionModule,
-    ApiModule
+    ApiModule,
+    EventEmitterModule.forRoot()
   ],
   controllers: [AppController],
 

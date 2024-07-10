@@ -343,7 +343,6 @@ export class SockeEventsService {
       const price = Number(objAux[product]['price_product']).toFixed(2);
       const reference = objAux[product]['reference'];
       const listaPricesMS = this.listPrices(objAux[product]['cost_product']);
-
       for (const row of listaPricesMS) {
         const rprice = Number(row['precio']).toFixed(2);
         const rmargin = row['margen'];
@@ -628,7 +627,6 @@ export class SockeEventsService {
     let comision: number[] = [];
     const listaPrecios: any[] = [];
     costo = parseFloat(costo.toString());
-
     if (costo >= 0 && costo <= 80) {
       comision = [50, 41, 33, 25, 13, 0.01, 5];
     } else if (costo >= 80.01 && costo <= 160) {
@@ -646,9 +644,8 @@ export class SockeEventsService {
     } else if (costo >= 5120.01 && costo <= 10240) {
       comision = [19, 16, 13, 11, 9, 0.01, 5];
     } else if (costo >= 10240.01) {
-      comision = [17, 13, 9, 8, 7, 0.01, 5];
+      comision = [17, 13, 9, 0.07, 0.09, 0.01, 5];
     }
-
     //Recorrer el arrayComision para formar el objeto
     let contador = 1;
     for (const margen of comision) {

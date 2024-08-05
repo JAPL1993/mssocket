@@ -105,7 +105,7 @@ constructor(
     }
 
     @Cron('0 10 19 * * *',{
-        disabled: process.env.ENVIRONMENT != "produccion" ? false : true
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
     })
 
     async getSellersMicrosip(){

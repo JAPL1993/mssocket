@@ -8,6 +8,7 @@ import { Logger } from 'winston';
 import { MicrosipModule } from '../microsip.module';
 import { DateTime } from 'luxon';
 import { getConfigToken } from '@nestjs/config';
+import { response } from 'express';
 require('dotenv').config();
 @Injectable()
 export class EntregadoEstatusService {
@@ -101,5 +102,28 @@ constructor(
             } 
         }
         this.logger.info('Finalizo el endpoint rollback a En Bodega')
+    }
+
+    @Cron('0 10 19 * * *',{
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+    })
+
+    async getSellersMicrosip(){
+        try {
+            this.logger.info("Inicio actualización de vendedores")
+            const responseSellers = await this.API.postMicrosip('Seller/getSellers',{
+                request_token:"1234"
+            });
+            if(responseSellers.data.status != 200){
+                this.logger.error("Error al obtener información de vendedores");
+            }
+            await this.API.postNode('api/microsip/sellersMicrosip',{
+                sellers:responseSellers.data.data
+            });
+            this.logger.info("Finalizo actualización de vendedores")
+        } catch (error) {
+            console.log(error);
+            this.logger.error(error);
+        }
     }
 }

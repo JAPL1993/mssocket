@@ -126,4 +126,29 @@ constructor(
             this.logger.error(error);
         }
     }
+
+    @Cron('0 00 08 12 * *',{
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+    })
+
+    async hpMes(){
+        try {
+            this.logger.info("Inicio del reporte HP por mes")
+            let today = DateTime.now()
+            let final  = today.minus({days:1}) 
+            let inicio = today.minus({months:1})
+
+            const fechaFinal = final.toFormat("yyyy-MM-dd")
+            const fechaInicio = inicio.toFormat("yyyy-MM-dd")
+
+            await this.API.postMicrosip("Reporte/hpReportMonth",{
+                request_token:"1234",
+                fechaInicio,
+                fechaFinal
+            });
+            this.logger.info("Fin del reporte HP por mes")
+        } catch (error) {
+            this.logger.error(error);
+        }
+    }
 }

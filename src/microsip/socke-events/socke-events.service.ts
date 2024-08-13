@@ -644,7 +644,7 @@ export class SockeEventsService {
     } else if (costo >= 5120.01 && costo <= 10240) {
       comision = [19, 16, 13, 11, 9, 0.01, 5];
     } else if (costo >= 10240.01) {
-      comision = [17, 13, 9, 0.07, 0.09, 0.01, 5];
+      comision = [17, 13, 9, 7, 9, 0.01, 5];
     }
     //Recorrer el arrayComision para formar el objeto
     let contador = 1;

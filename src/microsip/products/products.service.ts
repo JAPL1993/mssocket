@@ -264,7 +264,7 @@ export class ProductsService {
 
     return '';
   }
-  @Cron('0 10 * * * *', {
+  @Cron('0 */15 * * * *', {
     disabled: process.env.ENVIRONMENT == "produccion" ? false : true
 })
   async updatePricesMicrosipNode(){

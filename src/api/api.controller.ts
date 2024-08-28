@@ -19,6 +19,15 @@ export class ApiController {
         const customerMS = await this.apiService.createClientsMS();
         return customerMS
     }
+
+    @Get('/createListaMetodoCobro')
+    @Cron('0 */06 * * * *', {
+        disabled: process.env.ENVIRONMENT == "produccion" ? false : true
+    })
+    async createFormaCobro(){
+        const formasCobroMS = await this.apiService.createFormaCobro();
+        return formasCobroMS
+    }
     /* @Get('/rollbackPedidos')
     async rollbackPedidos(){
         const customerMS = await this.entregadoService.rollbackPedidosEntregado();

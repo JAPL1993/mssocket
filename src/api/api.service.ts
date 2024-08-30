@@ -35,4 +35,26 @@ export class ApiService {
         }
         this.logger.info('termino el createOrUpdate Clientes Cronjob')
     }
+
+    async createFormaCobro(){
+        this.logger.info('inicio getFormaCobro')
+        const dataRequestC = {
+            request_token:'1234',
+        };
+        const lista = await this.axios.postMicrosip("Seller/listaMetodoCobro", dataRequestC)
+        //console.log(lista.data)
+        if(lista.data == ""){
+            this.logger.info('createOrUpdate Cronjob->nada que actualizar/crear')
+        }else{
+            this.logger.info('Create forma_cobro Cronjob->Actualizando')
+            const responseNode = await this.axios.postNode("api/microsip/updateOrCreateMetodoCobro", {"data": lista.data.data})
+            //console.log("Respuesta del NODE: ",responseNode)
+            if(responseNode.error){
+                this.logger.error("create response: " + responseNode.error)
+                return
+            }
+            this.logger.info("create Cronjob response "+responseNode.status)
+        }
+        this.logger.info('termino el create FormasCobro Cronjob')
+    }    
 }

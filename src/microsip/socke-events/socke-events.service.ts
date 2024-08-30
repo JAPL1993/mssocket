@@ -180,6 +180,7 @@ export class SockeEventsService {
       customer,
       products,
       id_user,
+      is_credit
     } = data[0];
     const microsipDescription = `${id_cart} | ${
       description == null ? '' : description
@@ -268,15 +269,9 @@ export class SockeEventsService {
         //codigo para agrupar articulos SINCOD
         if (value['sku'] in objAux) {
           //agrupar las cantidades, precios y costos
-          objAux[value['sku']]['quantity_cart'] =
-            objAux[value['sku']]['quantity_cart'] + value['quantity_cart'];
-          objAux[value['sku']]['price_product'] =
-            objAux[value['sku']]['price_product'] +
-            (value['price_product'] * value['quantity_cart'] +
-              value['shipping_cost']);
-          objAux[value['sku']]['cost_product'] =
-            objAux[value['sku']]['cost_product'] +
-            value['cost_product'] * value['quantity_cart'];
+          objAux[value['sku']]['quantity_cart'] = objAux[value['sku']]['quantity_cart'] + value['quantity_cart'];
+          objAux[value['sku']]['price_product'] = objAux[value['sku']]['price_product'] + (value['price_product'] * value['quantity_cart'] + value['shipping_cost']);
+          objAux[value['sku']]['cost_product'] = objAux[value['sku']]['cost_product'] + value['cost_product'] * value['quantity_cart'];
         } else {
           //agregar por primera vez a la lista
           objAux[value['sku']] = value;
@@ -340,7 +335,13 @@ export class SockeEventsService {
         );
       }
       const name_Product = objAux[product]['name'];
-      const price = Number(objAux[product]['price_product']).toFixed(2);
+      let price = Number(objAux[product]['price_product']).toFixed(2);
+      console.log("is credit: ", is_credit);
+      if(is_credit == 1){
+        let recal = objAux[product]['price_product'] * 1.025;
+         price = Number(recal).toFixed(2);
+      }
+      console.log("precio: ", price);
       const reference = objAux[product]['reference'];
       const listaPricesMS = this.listPrices(objAux[product]['cost_product']);
       for (const row of listaPricesMS) {

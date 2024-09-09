@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Header } from '@nestjs/common';
 import { AxiosPromise } from 'axios';
 import { resolve} from 'path';
 import { clearConfigCache } from 'prettier';
@@ -11,6 +11,9 @@ import { Logger } from 'winston';
 import { Cron } from '@nestjs/schedule';
 import {EventEmitter2, OnEvent} from '@nestjs/event-emitter'
 import { EntregadoEstatusService } from '../entregado-estatus/entregado-estatus.service';
+import fetch from 'node-fetch';
+import { DateTime } from 'luxon';
+import { response } from 'express';
 
 @Injectable()
 export class SockeEventsService {
@@ -93,6 +96,9 @@ export class SockeEventsService {
       else if(data.type == 2){
         //venta en linea
         await this.handlerSaleOnlineToMicrosip(data,this.httpService,this.knexConn);
+      }
+      else if(data.type == 3){
+        await this.handlerPrestashopToMS();
       }
     }
     this.isQueueProcessing = false;
@@ -671,6 +677,20 @@ export class SockeEventsService {
       }
   }
 
+  handlerPrestashopToMS = async ()=>{
+      try{
+          //Emitir evento socket empezo con un pedido
+          console.log("Entro al insert para prestashop")
+          const resultOrder = await this.insertAllOrder();
+          //Emitir evento socket finalizo con exito
+          console.log(resultOrder);
+      }
+      catch(error){
+          console.log(error);
+          //Emitir evento socket error
+      }
+  }
+
   async insertEvent(
       data:any,
       httpService:HttpAxiosService,
@@ -795,6 +815,16 @@ export class SockeEventsService {
       console.log(insertedOrder.data);
       return Promise.resolve(`Pedido agregado con exito: ${data.order_reference}`);
   }
+
+  async insertAllOrder():Promise<any>{
+    const resCustomer = await this.insertCustomer();
+    const resProduct = await this.insertProduct();
+    const resOrder = await this.insertOrder();
+
+    return Promise.resolve("código finalizado");
+  }
+
+
   @OnEvent('order.addSku')
   async findSkuEvent(id_cart:any){
     console.log("inicio order.addSku",id_cart);
@@ -817,5 +847,313 @@ export class SockeEventsService {
     }
     /**Devolver los SKU de microsip al cotifast*/
     const resNode = await this.httpService.postNode('api/microsip/insertSku',{"arraySku":skusMicrosip.data.arraySku})
+  }
+
+  private async insertCustomer(){
+    try {
+      const customers = await this.knexConn
+        .knexQuery("customers")
+        .where("is_microsip",0)
+        .orderBy("id","asc");
+        for (let i = 0; i < customers.length; i++) {
+          const element = customers[i];
+          let fullName = element.name + " " + element.last_name;
+          const cpFiscal = element.cp_fiscal == null 
+            ? ""
+            :element.cp_fiscal;
+          const typePerson = element.type_person == null 
+            ? ""
+            :element.type_person;
+          const regimen = element.regimen == null 
+            ? ""
+            :element.regimen;
+          const state = element.state
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase();
+          const house_number = element.house_number
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase();
+          const suburb = element.suburb
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase();
+          const rfc = element.rfc == null || element.rfc =='' 
+            ? "SIN FACTURA"
+            :element.rfc;
+          const cfdi = element.cfdi == null || element.cfdi =='' 
+            ? "SIN FACTURA"
+            :element.cfdi;
+          const company = element.company == null || element.company =='' 
+            ? "SIN FACTURA"
+            :element.company;
+          const request = {
+            request_token:"1234",
+            name:fullName.toUpperCase(),
+            ps_id:element.id_customer_PS,
+            email:element.email,
+            address:element.address,
+            post_code:element.post_code,
+            cp_fiscal:cpFiscal,
+            type_person:typePerson,
+            regimen:regimen,
+            phone:element.phone,
+            cellphone:element.cellphone,
+            state:state,
+            city:element.city.toUpperCase(),
+            house_number:house_number,
+            suburb:suburb,
+            rfc:rfc,
+            cfdi:cfdi,
+            company:company,
+          }
+          //consultar c#
+          const resCustomer = await this.httpService.postMicrosip("Customer/sync_Customers",request);
+          //actualizar registro is_microsip segun la respuesta del c#
+          if(resCustomer.data.status == 200){
+            await this.knexConn.knexQuery("customers")
+              .where("id",element.id)
+              .update({
+                is_microsip:1
+              });
+          }
+          else if(resCustomer.data.status == "007"){
+            await this.knexConn.knexQuery("customers")
+              .where("id",element.id)
+              .update({
+                is_microsip:1
+              });
+          }
+        }
+    } catch (error) {
+      
+    }
+  }
+
+  private async insertProduct(){
+    try {
+      const products = await this.knexConn.knexQuery("products as p")
+        .innerJoin("product_to_buys as ptb",function(){
+          this.on("p.reference","=","ptb.product_reference")
+          .andOn("p.id_supplier","=","ptb.id_supplier_ps")
+        })
+        .where("ptb.is_microsip",0)
+        .andWhere("ptb.id_supplier_ps","<>",1)
+        .select(
+          "p.name",
+          "p.price",
+          "p.reference",
+          "ptb.id_supplier_ps as id_supplier",
+          "p.cost"
+        );
+        for (let i = 0; i < products.length; i++) {
+          const element = products[i];
+          const reference = element.reference.length > 20 
+            ? element.reference.slice(0,20)
+            :element.reference;
+          let pricesStrInsertMS:string[] = [];
+          let marginStrInsertMS:string[] =[];
+          const listaPricesMS = this.listPrices(element.cost);
+          for (const row of listaPricesMS) {
+            const rprice = Number(row['precio']).toFixed(2);
+            const rmargin = row['margen'];
+            pricesStrInsertMS.push(rprice.toString());
+            marginStrInsertMS.push(rmargin.toString());
+          }
+          // pasar el array en forma de un string para mandarlo a la api de c#
+          const StringInsertPricesMS = pricesStrInsertMS.join('|');
+          const StringInsertMargenMS = marginStrInsertMS.join('|');
+          const request = {
+            request_token:"1234",
+            name:element.name.toUpperCase(),
+            cost:element.cost,
+            price:element.price,
+            reference:reference,
+            pricesArray:StringInsertPricesMS,
+            margenArray:StringInsertMargenMS,
+            name_seller:"VENTASWEB1",
+            checkCreate:"1"
+          }
+          console.log(request);
+          //mandar a la api de c#
+          const resProduct = await this.httpService.postMicrosip("Product/insertProductMicrosip",request);
+          //actualizar la información en la base de datos de compufax segun la respuesta de la API
+          if(resProduct.data.status == 200){
+            await this.knexConn.knexQuery("product_to_buys")
+              .where("id",element.id)
+              .update({
+                is_microsip:1
+              });
+          }else if(resProduct.data.status == "007"){
+            await this.knexConn.knexQuery("product_to_buys")
+              .where("id",element.id)
+              .update({
+                is_microsip:1
+              });
+          }
+        }
+    } catch (error) {
+      this.logger.error(error)
+    }
+  }
+
+  private async insertOrder(){
+    try {
+      const orders = await this.knexConn.knexQuery("order_paids")
+        .whereNotNull("date_PS")
+        .whereNotNull("date_CMF")
+        .andWhere("is_microsip",0);
+      for (let i = 0; i < orders.length; i++) {
+        const element = orders[i];
+        const url = `${process.env.URL_SHOP_PRESTASHOP_DEV}orders?ws_key=${process.env.API_TOKEN_PRESTASHOP_DEV}&filter[reference]=[${element.order_reference}]&display=full&output_format=JSON`;
+        console.log(url);
+        const infoPresta = await fetch(url,{
+          method:"GET",
+          Headers:{
+            'Content-Type': 'application/json'
+          }
+        });
+        const prestaOrder = await infoPresta.json();
+        if(prestaOrder.length == 0){
+          continue;
+        }
+        const objOrder = prestaOrder.orders[0];
+        if(objOrder.valid == 0){
+          await this.knexConn.knexQuery("order_paids")
+            .where("order_reference",element.order_reference)
+            .update({
+              is_microsip:1
+            });
+            continue;
+        }
+        const arrayProducts = objOrder.associations.order_rows;
+        const products_buy = {}
+        for (let x = 0; x < arrayProducts.length; x++) {
+          const product = arrayProducts[x];
+          products_buy[product.product_reference] = product;
+        }
+        const sqlProduct = await this.knexConn.knexQuery("products as p")
+          .innerJoin("product_to_buys as ptb",function(){
+            this.on("p.reference","=","ptb.product_reference")
+            .andOn("ptb.id_supplier_PS","=","p.id_supplier")
+            .andOn("ptb.supplier_reference","=","p.supplier_reference")
+          })
+          .innerJoin("suppliers as s","s.id_supplier","=","ptb.id_supplier_PS")
+          .where("ptb.id_order_paid",element.id)
+          .select(
+            "s.name as supplier",
+            "ptb.product_reference as reference",
+            "ptb.quantity",
+            "p.cost",
+            "s.id_supplier as id_supplier",
+            "ptb.price",
+            "p.supplier_reference",
+            "p.name as nameProd"
+          );
+        let totalProd = 0;
+        const suppliers = [];
+        const reference = [];
+        const quantities = [];
+        const prices = [];
+        const nameProd = [];
+        const arrayCost = [];
+        const referenceMS = [];
+        const quantitiesMS = [];
+        const pricesMS = [];
+        for (let x = 0; x < sqlProduct.length; x++) {
+          const pro = sqlProduct[x];
+          let pricePro = products_buy[pro.reference].unit_price_tax_excl;
+          totalProd += pricePro * products_buy[pro.reference].product_quantity;
+          suppliers.push(pro.supplier);
+          reference.push(pro.reference);
+          quantities.push(products_buy[pro.reference].product_quantity);
+          prices.push(Number(pricePro).toFixed(2));
+          nameProd.push(pro.nameProd);
+          if(pro.id_supplier == 1){
+            referenceMS.push("'"+pro.reference+"'");
+            quantitiesMS.push(products_buy[pro.reference]["product_quantity"]);
+            pricesMS.push(pricePro.toFixed(2));
+          }
+          arrayCost.push(pro.cost);
+        }
+        let total_envio = objOrder.total_shipping_tax_incl / 1.16;
+        if(total_envio <= 0){
+          total_envio = 0.01;
+        }
+        if(total_envio >= 0 && total_envio < 1){
+          total_envio = 0.01;
+        }
+        prices.push(total_envio.toFixed(2));
+        reference.push("ENVIOWEB");
+        quantities.push(1);
+        const suppliersString = suppliers.join(",");
+        const referenceString = reference.join(",");
+        const quantitysString = quantities.join(",");
+        const nameString = nameProd.join("|");
+        const reference_ms_string = referenceMS.join(",");
+        const quantity_ms_string = quantitiesMS.join("|");
+        const price_ms_string = pricesMS.join("|");
+        const priceString = prices.join("|");
+        const costString = arrayCost.join("|");
+        const strDate = this.formatDate(element.date_CMF);
+
+        const request = {
+          request_token:"1234",
+          order_reference:element.order_reference,
+          payment_type:objOrder.payment,
+          total:element.total.toString(),
+          date_add:strDate,
+          id_customer_PS:element.id_customer_PS,
+          supplierString:suppliersString,
+          referenceString:referenceString,
+          quantityString:quantitysString,
+          priceString:priceString,
+          costString:costString,
+          nameString:nameString,
+          reference_MS_String:reference_ms_string,
+          quantity_MS_String:quantity_ms_string,
+          price_MS_String:price_ms_string
+        }
+        console.log(request);
+        //consultar api c#
+        const resOrder = await this.httpService.postMicrosip("Order/sync_Orders",request); 
+        //actualizar tablas segun los resultados del c#
+        if(resOrder.data.status == "success"){
+          const folioMs = resOrder.data.folio;
+          await this.knexConn.knexQuery("order_paids")
+            .where("order_reference",element.order_reference)
+            .update({
+              is_microsip:1
+            });
+            await this.knexConn.knexQuery("order_paids AS op")
+            .update("sh.folio_ms",folioMs)
+            .join('shoppings AS sh','sh.id_order','=','op.id')
+            .where("op.order_reference",element.order_reference);
+        }
+        else if(resOrder.data.status == "repetido"){
+          await this.knexConn.knexQuery("order_paids")
+            .where("order_reference",element.order_reference)
+            .update({
+              is_microsip:1
+          });         
+        }
+        //en caso de que algun artículo sea de microsip agregar el registro en la tabla shoppings
+      }
+    } catch (error) {
+      console.log("entro al trycatch",error);
+    }
+  }
+  private formatDate(date){
+    let day = date.getDate()
+    if(day < 10){
+      day = `0${day}`;
+    }
+    let month = date.getMonth() + 1;
+    if(month < 10){
+      month = `0${month}`;
+    }
+    let year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 }

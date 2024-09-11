@@ -97,9 +97,10 @@ export class MicrosipReportsService {
     //@Cron('59 * * * * *')
     async sendReport(data:any,objHttp:HttpAxiosService):Promise<any>{
         let vendedor = '';
-        if(data.sellerName != 'Todos '){
+        if(data.sellerName != 'TODOS'){
             vendedor = data.sellerName.toUpperCase();
         }
+
         const dir_report = await objHttp.postMicrosip('Reporte/ReportCommission',{
             request_token:"1234",
             fechaInicio:data.fechaInicio,
